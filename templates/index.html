@@ -7,11 +7,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
-        .user-tile { transition: 0.2s; border-radius: 15px; cursor: pointer; border: none; }
+        .user-tile { transition: 0.2s; border-radius: 15px; cursor: pointer; border: none; position: relative; }
         .user-tile:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .initial-avatar { width: 70px; height: 70px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.5rem; }
-        .product-img { width: 100%; height: 120px; object-fit: contain; padding: 10px; }
-        .price-text { color: #198754; font-weight: bold; font-size: 0.95rem; }
+        .product-img { width: 100%; height: 100px; object-fit: contain; padding: 5px; }
+        .price-text { color: #198754; font-weight: bold; font-size: 1rem; }
+        .soh-badge { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; padding: 4px 8px; border-radius: 10px; }
+        .meta-text { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* KEYPAD STYLES */
         .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 0 auto; }
@@ -29,13 +31,11 @@
         <div class="d-flex align-items-center">
             <span class="me-3">Hi, <strong>{{ user.first_name }}</strong></span>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 me-3">${{ "%.2f"|format(user.balance) }}</span>
-            
             {% if user.pin %}
                 <button onclick="openKeypad('remove')" class="btn btn-sm btn-warning me-2"><i class="fas fa-unlock"></i> Remove PIN</button>
             {% else %}
                 <button onclick="openKeypad('set')" class="btn btn-sm btn-info me-2"><i class="fas fa-lock"></i> Set PIN</button>
             {% endif %}
-
             <a href="{{ url_for('main.logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
         </div>
         {% endif %}
@@ -64,13 +64,21 @@
         </div>
     {% else %}
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-4">
-            {% for item, description, price in quick_items %}
+            {% for item, p in quick_items %}
             <div class="col">
                 <a href="{{ url_for('main.manual_add', barcode=item.barcode_val) }}" class="text-decoration-none text-dark">
                     <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile">
+                        <span class="badge soh-badge {{ 'bg-danger' if p.stock_level < 5 else 'bg-light text-dark border' }}">
+                            {{ p.stock_level }} left
+                        </span>
+                        
                         <img src="{{ url_for('static', filename='images/' + item.image_url) }}" class="product-img mb-2">
-                        <div class="fw-bold small">{{ description }}</div>
-                        <div class="price-text">${{ "%.2f"|format(price) }}</div>
+                        
+                        <div class="meta-text">{{ p.manufacturer }}</div>
+                        <div class="fw-bold small">{{ p.description }}</div>
+                        <div class="meta-text mb-2">{{ p.size }}</div>
+                        
+                        <div class="price-text">${{ "%.2f"|format(p.price) }}</div>
                     </div>
                 </a>
             </div>
@@ -98,7 +106,6 @@
             <div class="modal-body text-center p-4">
                 <h5 id="keypadTitle" class="fw-bold mb-3">Enter PIN</h5>
                 <div id="pinDots" class="pin-dots mb-4"></div>
-                
                 <div class="keypad-grid">
                     <button class="key-btn" onclick="pressKey('1')">1</button>
                     <button class="key-btn" onclick="pressKey('2')">2</button>
@@ -127,19 +134,17 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let currentInput = "";
-    let keypadMode = ""; // 'login', 'set', or 'remove'
+    let keypadMode = "";
     let modal = new bootstrap.Modal(document.getElementById('keypadModal'));
 
-    // AUTO-LOGOUT LOGIC
     {% if user %}
     let timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 10000);
-    window.onclick = window.onkeydown = () => { 
-        clearTimeout(timeout); 
-        timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 10000); 
-    };
+    document.addEventListener('mousedown', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 10000);
+    });
     {% endif %}
 
-    // KEYPAD TRIGGER
     function openKeypad(mode, userId = null) {
         keypadMode = mode;
         currentInput = "";
@@ -150,46 +155,33 @@
     }
 
     function pressKey(key) {
-        if (key === 'C') {
-            currentInput = "";
-        } else if (key === 'OK') {
-            submitPin();
-            return;
-        } else if (currentInput.length < 4) {
-            currentInput += key;
-        }
+        if (key === 'C') currentInput = "";
+        else if (key === 'OK') { submitPin(); return; }
+        else if (currentInput.length < 4) currentInput += key;
         document.getElementById('pinDots').innerText = "•".repeat(currentInput.length);
         if (currentInput.length === 4 && keypadMode === 'login') submitPin();
     }
 
     function submitPin() {
-        if (currentInput.length !== 4) {
-            alert("PIN must be 4 digits.");
-            return;
-        }
-
-        if (keypadMode === 'login') {
-            document.getElementById('pin_value').value = currentInput;
-            document.getElementById('pinForm').submit();
-        } else if (keypadMode === 'set') {
+        if (currentInput.length !== 4) return;
+        const form = document.getElementById('pinForm');
+        document.getElementById('pin_value').value = currentInput;
+        if (keypadMode === 'login') form.action = "{{ url_for('main.verify_pin') }}";
+        else if (keypadMode === 'set') {
             window.location.href = "{{ url_for('main.update_pin', action='set') }}?pin=" + currentInput;
-        } else if (keypadMode === 'remove') {
-            // Re-verify current PIN before removal
-            document.getElementById('pin_value').value = currentInput;
-            document.getElementById('pinForm').action = "{{ url_for('main.update_pin', action='remove') }}"; 
-            document.getElementById('pinForm').submit();
-        }
+            return;
+        } else if (keypadMode === 'remove') form.action = "{{ url_for('main.update_pin', action='remove') }}";
+        form.submit();
     }
 
-    // INTERCEPT PIN LOGIN
     {% if request.args.get('needs_pin') %}
         openKeypad('login', "{{ request.args.get('needs_pin') }}");
     {% endif %}
 
     document.addEventListener("click", (e) => { 
-        if (!['INPUT', 'A', 'BUTTON'].includes(e.target.tagName)) {
-            const barcode = document.getElementById("barcode");
-            if (barcode) barcode.focus();
+        if (!['INPUT', 'A', 'BUTTON', 'I'].includes(e.target.tagName)) {
+            const bc = document.getElementById("barcode");
+            if (bc) bc.focus();
         }
     });
 </script>

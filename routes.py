@@ -9,40 +9,42 @@ def process_barcode(barcode):
     barcode = barcode.strip()
     user = Users.query.filter_by(card_id=barcode).first()
     
-    # LOGIN LOGIC
     if user:
         if user.pin:
             return {"status": "needs_pin", "user_id": user.user_id}
-        
         session['user_id'] = int(user.user_id)
         user.last_seen = datetime.utcnow()
         db.session.commit()
         return {"status": "logged_in"}
 
-    # PURCHASE LOGIC
     if 'user_id' in session:
         product = Products.query.filter_by(upc_code=barcode).first()
         if product:
             u = Users.query.get(int(session['user_id']))
             price = Decimal(str(product.price or 0.0))
             u.balance = Decimal(str(u.balance or 0.0)) - price
+            
+            # Reduce Stock on Hand (SOH)
+            if product.stock_level > 0:
+                product.stock_level -= 1
+                
             new_t = Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price)
             db.session.add(new_t)
             db.session.commit()
             return {"status": "purchased", "description": product.description}
-            
     return {"status": "not_found"}
 
 @main.route('/')
 def index():
     current_user = None
     just_bought = request.args.get('bought')
-    
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
 
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
-    quick_data = db.session.query(Quick_Items, Products.description, Products.price).join(
+    
+    # Query modified to get the full Product object for the tiles
+    quick_data = db.session.query(Quick_Items, Products).join(
         Products, Quick_Items.barcode_val == Products.upc_code
     ).all()
     
@@ -53,32 +55,30 @@ def verify_pin():
     user_id = request.form.get('user_id')
     entered_pin = request.form.get('pin')
     user = Users.query.get(int(user_id))
-    
     if user and user.pin == entered_pin:
         session['user_id'] = user.user_id
         user.last_seen = datetime.utcnow()
         db.session.commit()
         return redirect(url_for('main.index'))
     else:
-        flash("Incorrect PIN. Please try again.", "danger")
+        flash("Incorrect PIN.", "danger")
         return redirect(url_for('main.index'))
 
-@main.route('/update-pin/<action>')
+@main.route('/update-pin/<action>', methods=['GET', 'POST'])
 def update_pin(action):
-    if 'user_id' not in session:
-        return redirect(url_for('main.index'))
-    
+    if 'user_id' not in session: return redirect(url_for('main.index'))
     user = Users.query.get(int(session['user_id']))
-    
     if action == 'remove':
-        user.pin = None
-        flash("PIN removed.", "info")
+        entered_pin = request.form.get('pin')
+        if user.pin == entered_pin:
+            user.pin = None
+            flash("PIN removed.", "info")
+        else: flash("Incorrect PIN.", "danger")
     elif action == 'set':
         new_pin = request.args.get('pin')
         if new_pin and len(new_pin) == 4:
             user.pin = new_pin
             flash("PIN set successfully!", "success")
-            
     db.session.commit()
     return redirect(url_for('main.index'))
 
@@ -104,7 +104,9 @@ def undo():
         lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
         if lt:
             u = Users.query.get(uid)
+            p = Products.query.get(lt.upc_code)
             u.balance = Decimal(str(u.balance)) + Decimal(str(lt.amount))
+            if p: p.stock_level += 1 # Restore stock
             db.session.delete(lt)
             db.session.commit()
             flash("Purchase Undone.", "info")

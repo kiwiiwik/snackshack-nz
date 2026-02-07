@@ -11,15 +11,17 @@ class Users(db.Model):
     card_id = db.Column('Card_ID', db.String(50), unique=True)
     balance = db.Column('Balance', db.Numeric(10, 2), default=0.00)
     last_seen = db.Column('last_seen', db.DateTime, default=datetime.utcnow)
-    # New PIN and Email columns
     pin = db.Column('PIN', db.String(4))
     email = db.Column('Email_Address', db.String(100))
 
 class Products(db.Model):
     __tablename__ = 'Products'
     upc_code = db.Column('UPC_Code', db.String(50), primary_key=True)
+    manufacturer = db.Column('Manufacturer', db.String(100)) # New
     description = db.Column('Description', db.String(100))
+    size = db.Column('Size', db.String(50)) # New
     price = db.Column('Price', db.Numeric(10, 2))
+    stock_level = db.Column('Stock_Level', db.Integer, nullable=False, default=0) # New
 
 class Transactions(db.Model):
     __tablename__ = 'Transactions'
