@@ -4,7 +4,7 @@ from datetime import datetime
 db = SQLAlchemy()
 
 class Users(db.Model):
-    __tablename__ = 'Users'
+    __tablename__ = 'Users' # Matches your SQL table exactly
     user_id = db.Column(db.Integer, primary_key=True)
     first_name = db.Column(db.String(50))
     last_name = db.Column(db.String(50))
@@ -28,7 +28,7 @@ class Transactions(db.Model):
     transaction_date = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Quick_Items(db.Model):
-    __tablename__ = 'Quick_Items' # Forces use of one underscore
+    __tablename__ = 'Quick_Items' # Fixes the "quick__items" not found error
     id = db.Column(db.Integer, primary_key=True)
     label = db.Column(db.String(50))
     barcode_val = db.Column(db.String(50))
