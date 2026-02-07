@@ -76,7 +76,9 @@
                         <span class="badge soh-badge {{ 'bg-danger' if p.stock_level < 5 else 'bg-light text-dark border' }}">
                             {{ p.stock_level }} left
                         </span>
-                        <img src="{{ url_for('static', filename='images/' + item.image_url) }}" class="product-img mb-2">
+                        <img src="{{ url_for('static', filename='images/' + item.image_url) }}" 
+                             class="product-img mb-2" 
+                             onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder.png') }}';">
                         <div class="meta-text">{{ p.manufacturer }}</div>
                         <div class="fw-bold small">{{ p.description }}</div>
                         <div class="meta-text mb-2">{{ p.size }}</div>
@@ -99,28 +101,51 @@
 <div class="modal fade" id="adminModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">PIN Management</h5>
+            <div class="modal-header">
+                <ul class="nav nav-pills" id="adminTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="pins-tab" data-bs-toggle="pill" data-bs-target="#pins" type="button">PINs</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="stock-tab" data-bs-toggle="pill" data-bs-target="#stock" type="button">Stockroom</button>
+                    </li>
+                </ul>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <input type="text" id="staffSearch" class="form-control mb-3 rounded-pill" placeholder="Search staff by name...">
-                <table class="table align-middle">
-                    <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
-                    <tbody id="staffTable">
-                        {% for s in staff %}
-                        <tr class="staff-row">
-                            <td class="staff-name">{{ s.first_name }} {{ s.last_name }}</td>
-                            <td>{% if s.pin %}<span class="badge bg-success">PIN Active</span>{% else %}<span class="badge bg-light text-dark">No PIN</span>{% endif %}</td>
-                            <td>
-                                {% if s.pin %}
-                                <button onclick="if(confirm('Reset PIN for {{ s.first_name }}?')) window.location.href='{{ url_for('main.admin_reset_pin', target_id=s.user_id) }}';" class="btn btn-sm btn-danger rounded-pill px-3">Reset PIN</button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="pins">
+                        <input type="text" id="staffSearch" class="form-control mb-3 rounded-pill" placeholder="Search staff...">
+                        <table class="table align-middle">
+                            <tbody id="staffTable">
+                                {% for s in staff %}
+                                <tr class="staff-row">
+                                    <td class="staff-name">{{ s.first_name }} {{ s.last_name }}</td>
+                                    <td>{% if s.pin %}<span class="badge bg-success">Active</span>{% else %}None{% endif %}</td>
+                                    <td>
+                                        {% if s.pin %}
+                                        <button onclick="if(confirm('Reset {{ s.first_name }}?')) window.location.href='{{ url_for('main.admin_reset_pin', target_id=s.user_id) }}';" class="btn btn-sm btn-danger">Reset</button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="tab-pane fade" id="stock">
+                        <form action="{{ url_for('main.update_stock') }}" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">Scan Barcode</label>
+                                <input type="text" name="barcode" class="form-control" id="stockBarcode" autofocus>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Quantity to Add</label>
+                                <input type="number" name="quantity" class="form-control" value="10">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Restock Item</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -178,7 +203,6 @@
     });
     {% endif %}
 
-    // Admin Search Logic
     const searchInput = document.getElementById('staffSearch');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -187,6 +211,14 @@
                 const name = row.querySelector('.staff-name').textContent.toLowerCase();
                 row.style.display = name.includes(term) ? "" : "none";
             });
+        });
+    }
+
+    // Auto-focus barcode scanner in Stockroom tab
+    const stockTab = document.getElementById('stock-tab');
+    if (stockTab) {
+        stockTab.addEventListener('shown.bs.tab', () => {
+            document.getElementById('stockBarcode').focus();
         });
     }
 

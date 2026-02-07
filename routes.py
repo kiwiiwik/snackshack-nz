@@ -8,7 +8,6 @@ main = Blueprint('main', __name__)
 def process_barcode(barcode):
     barcode = barcode.strip()
     user = Users.query.filter_by(card_id=barcode).first()
-    
     if user:
         if user.pin:
             return {"status": "needs_pin", "user_id": user.user_id}
@@ -47,6 +46,24 @@ def index():
     
     return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, staff=all_staff)
 
+@main.route('/admin/update-stock', methods=['POST'])
+def update_stock():
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    admin = Users.query.get(int(session['user_id']))
+    if not admin or not admin.is_admin: return redirect(url_for('main.index'))
+
+    barcode = request.form.get('barcode').strip()
+    qty = int(request.form.get('quantity', 0))
+    product = Products.query.get(barcode)
+    
+    if product:
+        product.stock_level += qty
+        db.session.commit()
+        flash(f"Restocked {product.description}: {qty} units added.", "success")
+    else:
+        flash("Product not found.", "danger")
+    return redirect(url_for('main.index'))
+
 @main.route('/verify-pin', methods=['POST'])
 def verify_pin():
     user_id = request.form.get('user_id')
@@ -70,7 +87,7 @@ def admin_reset_pin(target_id):
         if target_user:
             target_user.pin = None
             db.session.commit()
-            flash(f"PIN for {target_user.first_name} has been cleared.", "success")
+            flash(f"PIN for {target_user.first_name} cleared.", "success")
     return redirect(url_for('main.index'))
 
 @main.route('/update-pin/<action>', methods=['GET', 'POST'])
