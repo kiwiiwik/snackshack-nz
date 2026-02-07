@@ -5,11 +5,8 @@ from decimal import Decimal
 
 main = Blueprint('main', __name__)
 
-# --- HELPER: Handles Login and Purchases ---
 def process_barcode(barcode):
     barcode = barcode.strip()
-    
-    # 1. Login Logic: Find user by Card_ID
     user = Users.query.filter_by(card_id=barcode).first()
     if user:
         session['user_id'] = int(user.user_id)
@@ -17,28 +14,17 @@ def process_barcode(barcode):
         db.session.commit()
         return True
 
-    # 2. Purchase Logic: Requires active session
     if 'user_id' in session:
         product = Products.query.filter_by(upc_code=barcode).first()
         if product:
             u = Users.query.get(int(session['user_id']))
-            # Decimal math for financial accuracy
             price = Decimal(str(product.price or 0.0))
             u.balance = Decimal(str(u.balance or 0.0)) - price
-            
-            # Record the purchase linking User and Product
-            new_t = Transactions(
-                user_id=u.user_id, 
-                upc_code=product.upc_code, 
-                amount=price,
-                transaction_date=datetime.utcnow()
-            )
+            new_t = Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price)
             db.session.add(new_t)
             db.session.commit()
             return True
     return False
-
-# --- THE ROUTES ---
 
 @main.route('/')
 def index():
@@ -46,20 +32,13 @@ def index():
     last_item = None
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
-        # Fetch latest transaction for Undo functionality
         last_t = Transactions.query.filter_by(user_id=current_user.user_id).order_by(Transactions.transaction_date.desc()).first()
         if last_t:
             last_item = Products.query.get(last_t.upc_code)
-
-    # Fetch 6x5 grid tiles for the Auckland office
+    
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
     quick_items = Quick_Items.query.all()
-    
-    return render_template('index.html', 
-                         user=current_user, 
-                         users=vips, 
-                         quick_items=quick_items, 
-                         last_item=last_item)
+    return render_template('index.html', user=current_user, users=vips, quick_items=quick_items, last_item=last_item)
 
 @main.route('/all-staff')
 def all_users():
@@ -70,7 +49,6 @@ def all_users():
 def undo():
     if 'user_id' in session:
         uid = int(session['user_id'])
-        # Find latest transaction to reverse
         lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
         if lt:
             u = Users.query.get(uid)
@@ -89,8 +67,7 @@ def manual_add(barcode=None):
 @main.route('/scan', methods=['POST'])
 def scan():
     barcode = request.form.get('barcode')
-    if barcode:
-        process_barcode(barcode)
+    if barcode: process_barcode(barcode)
     return redirect(url_for('main.index'))
 
 @main.route('/logout')

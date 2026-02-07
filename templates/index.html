@@ -1,122 +1,76 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snack Shack NZ</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .user-tile { transition: 0.2s; border-radius: 15px; border: none; cursor: pointer; }
-        .user-tile:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .initial-avatar { 
-            width: 70px; height: 70px; background: #0d6efd; color: white; 
-            border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.5rem;
-        }
-        .product-img { width: 100%; height: 120px; object-fit: contain; padding: 10px; }
-        #barcode { border-radius: 10px; border: 2px solid #dee2e6; font-size: 1.2rem; }
-    </style>
-</head>
-<body>
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from models import db, Users, Products, Transactions, Quick_Items
+from datetime import datetime
+from decimal import Decimal
 
-<nav class="navbar navbar-light bg-white shadow-sm mb-4">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="/">🥝  Auckland's NEW Snack Shack</a>
-        {% if user %}
-        <div class="d-flex align-items-center">
-            <span class="me-3">Logged in as <strong>{{ user.first_name }}</strong></span>
-            <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 me-3">
-                ${{ "%.2f"|format(user.balance) }}
-            </span>
-            <a href="{{ url_for('main.logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
-        </div>
-        {% endif %}
-    </div>
-</nav>
+main = Blueprint('main', __name__)
 
-<div class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}
-            <div class="alert alert-{{ cat }} text-center shadow-sm">{{ msg }}</div>
-        {% endfor %}{% endif %}
-    {% endwith %}
+def process_barcode(barcode):
+    barcode = barcode.strip()
+    user = Users.query.filter_by(card_id=barcode).first()
+    if user:
+        session['user_id'] = int(user.user_id)
+        user.last_seen = datetime.utcnow()
+        db.session.commit()
+        return True
 
-    {% if not user %}
-        <h4 class="text-center mb-5 text-secondary">Select User (Auckland)</h4>
-        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4 mb-5">
-            {% for u in users %}
-            <div class="col">
-                <a href="{{ url_for('main.manual_add', barcode=u.card_id or '') }}" class="text-decoration-none text-dark">
-                    <div class="card h-100 p-4 user-tile text-center shadow-sm">
-                        <div class="initial-avatar">{{ u.first_name[0] }}{{ u.last_name[0] if u.last_name else '' }}</div>
-                        <div class="fw-bold">{{ u.first_name }}</div>
-                        <div class="text-muted small">{{ u.last_name if u.last_name else '' }}</div>
-                    </div>
-                </a>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="text-center mb-5">
-            <a href="{{ url_for('main.all_users') }}" class="btn btn-light border shadow-sm">
-                <i class="fas fa-users me-2"></i> Find Other Staff...
-            </a>
-        </div>
-    {% else %}
-        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-4">
-            {% for item in quick_items %}
-            <div class="col">
-                <a href="{{ url_for('main.manual_add', barcode=item.barcode_val) }}" class="text-decoration-none text-dark">
-                    <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile">
-                        <img src="{{ url_for('static', filename='images/' + item.image_url) }}" class="product-img mb-2">
-                        <div class="fw-bold small">{{ item.label }}</div>
-                    </div>
-                </a>
-            </div>
-            {% endfor %}
-        </div>
+    if 'user_id' in session:
+        product = Products.query.filter_by(upc_code=barcode).first()
+        if product:
+            u = Users.query.get(int(session['user_id']))
+            price = Decimal(str(product.price or 0.0))
+            u.balance = Decimal(str(u.balance or 0.0)) - price
+            new_t = Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price)
+            db.session.add(new_t)
+            db.session.commit()
+            return True
+    return False
 
-        {% if last_item %}
-        <div class="alert alert-info d-flex justify-content-between align-items-center shadow-sm mt-4">
-            <span>Last purchased: <strong>{{ last_item.description }}</strong></span>
-            <a href="{{ url_for('main.undo') }}" class="btn btn-danger btn-sm">Undo Purchase</a>
-        </div>
-        {% endif %}
+@main.route('/')
+def index():
+    current_user = None
+    last_item = None
+    if 'user_id' in session:
+        current_user = Users.query.get(int(session['user_id']))
+        last_t = Transactions.query.filter_by(user_id=current_user.user_id).order_by(Transactions.transaction_date.desc()).first()
+        if last_t:
+            last_item = Products.query.get(last_t.upc_code)
+    
+    vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
+    quick_items = Quick_Items.query.all()
+    return render_template('index.html', user=current_user, users=vips, quick_items=quick_items, last_item=last_item)
 
-    {% endif %}
+@main.route('/all-staff')
+def all_users():
+    everyone = Users.query.order_by(Users.first_name.asc()).all()
+    return render_template('users.html', users=everyone)
 
-    <div class="mt-5 mb-5">
-        <form action="{{ url_for('main.scan') }}" method="POST">
-            <input type="text" name="barcode" id="barcode" class="form-control text-center py-3" 
-                   placeholder="Scan Barcode Here..." autofocus autocomplete="off">
-        </form>
-    </div>
-</div>
+@main.route('/undo')
+def undo():
+    if 'user_id' in session:
+        uid = int(session['user_id'])
+        lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
+        if lt:
+            u = Users.query.get(uid)
+            u.balance = Decimal(str(u.balance)) + Decimal(str(lt.amount))
+            db.session.delete(lt)
+            db.session.commit()
+            flash("Purchase Undone.", "info")
+    return redirect(url_for('main.index'))
 
-<script>
-    // 10-Second Auto-Logout logic
-    {% if user %}
-    let timeout;
-    function resetTimer() {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            window.location.href = "{{ url_for('main.logout') }}";
-        }, 10000); 
-    }
-    window.onload = resetTimer;
-    window.onmousemove = resetTimer;
-    window.onmousedown = resetTimer; 
-    window.onclick = resetTimer;     
-    window.onkeydown = resetTimer;   
-    {% endif %}
+@main.route('/manual/<barcode>')
+def manual_add(barcode=None):
+    if barcode and barcode not in ['None', '']:
+        process_barcode(barcode)
+    return redirect(url_for('main.index'))
 
-    // Maintain focus for the physical scanner on the Auckland monitor
-    document.addEventListener("click", function(e) {
-        if (!['INPUT', 'A', 'BUTTON', 'I'].includes(e.target.tagName)) {
-            document.getElementById("barcode").focus();
-        }
-    });
-</script>
-</body>
-</html>
+@main.route('/scan', methods=['POST'])
+def scan():
+    barcode = request.form.get('barcode')
+    if barcode: process_barcode(barcode)
+    return redirect(url_for('main.index'))
+
+@main.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    return redirect(url_for('main.index'))
