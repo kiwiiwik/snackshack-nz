@@ -13,7 +13,6 @@ def process_barcode(barcode):
         user.last_seen = datetime.utcnow()
         db.session.commit()
         return True
-
     if 'user_id' in session:
         product = Products.query.filter_by(upc_code=barcode).first()
         if product:
@@ -35,7 +34,6 @@ def index():
         last_t = Transactions.query.filter_by(user_id=current_user.user_id).order_by(Transactions.transaction_date.desc()).first()
         if last_t:
             last_item = Products.query.get(last_t.upc_code)
-    
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
     quick_items = Quick_Items.query.all()
     return render_template('index.html', user=current_user, users=vips, quick_items=quick_items, last_item=last_item)
@@ -55,13 +53,11 @@ def undo():
             u.balance = Decimal(str(u.balance)) + Decimal(str(lt.amount))
             db.session.delete(lt)
             db.session.commit()
-            flash("Purchase Undone.", "info")
     return redirect(url_for('main.index'))
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
-    if barcode and barcode not in ['None', '']:
-        process_barcode(barcode)
+    if barcode: process_barcode(barcode)
     return redirect(url_for('main.index'))
 
 @main.route('/scan', methods=['POST'])
