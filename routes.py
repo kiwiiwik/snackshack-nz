@@ -34,6 +34,9 @@ def process_barcode(barcode):
 def index():
     current_user = None
     all_staff = None
+    # RESTORED: This line catches the purchase result from the URL
+    just_bought = request.args.get('bought') 
+    
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
         if current_user and current_user.is_admin:
@@ -44,7 +47,7 @@ def index():
         Products, Quick_Items.barcode_val == Products.upc_code
     ).all()
     
-    return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, staff=all_staff)
+    return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, staff=all_staff, just_bought=just_bought)
 
 @main.route('/admin/update-stock', methods=['POST'])
 def update_stock():
@@ -59,7 +62,7 @@ def update_stock():
     if product:
         product.stock_level += qty
         db.session.commit()
-        flash(f"Restocked {product.description}: {qty} units added.", "success")
+        flash(f"Restocked {product.description} (+{qty})", "success")
     else:
         flash("Product not found.", "danger")
     return redirect(url_for('main.index'))

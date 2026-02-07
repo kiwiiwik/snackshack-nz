@@ -6,7 +6,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; padding-bottom: 90px; } 
         .user-tile { transition: 0.2s; border-radius: 15px; cursor: pointer; border: none; position: relative; }
         .user-tile:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .initial-avatar { width: 70px; height: 70px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.5rem; }
@@ -19,6 +19,7 @@
         .key-btn { height: 70px; font-size: 1.5rem; font-weight: bold; border-radius: 12px; border: 1px solid #dee2e6; background: white; transition: 0.1s; }
         .key-btn:active { background: #e9ecef; transform: scale(0.95); }
         .pin-dots { font-size: 2rem; letter-spacing: 15px; color: #0d6efd; height: 50px; }
+        .fixed-transaction-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1030; }
     </style>
 </head>
 <body>
@@ -58,7 +59,7 @@
             <div class="col">
                 <a href="{{ url_for('main.manual_add', barcode=u.card_id or '') }}" class="text-decoration-none text-dark">
                     <div class="card h-100 p-4 user-tile text-center shadow-sm">
-                        {% if u.is_admin %}<i class="fas fa-shield-alt admin-badge" title="Admin User"></i>{% endif %}
+                        {% if u.is_admin %}<i class="fas fa-shield-alt admin-badge"></i>{% endif %}
                         <div class="initial-avatar">{{ u.first_name[0] }}</div>
                         <div class="fw-bold">{{ u.first_name }} {{ u.last_name }}</div>
                         {% if u.pin %}<div class="text-muted small mt-1"><i class="fas fa-lock"></i></div>{% endif %}
@@ -76,7 +77,7 @@
                         <span class="badge soh-badge {{ 'bg-danger' if p.stock_level < 5 else 'bg-light text-dark border' }}">
                             {{ p.stock_level }} left
                         </span>
-                        <img src="{{ url_for('static', filename='images/' + item.image_url) }}" 
+                        <img src="{{ url_for('static', filename='images/' + (item.image_url or 'placeholder.png')) }}" 
                              class="product-img mb-2" 
                              onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder.png') }}';">
                         <div class="meta-text">{{ p.manufacturer }}</div>
@@ -88,27 +89,28 @@
             </div>
             {% endfor %}
         </div>
-        {% if just_bought %}
-        <div class="alert alert-success d-flex justify-content-between align-items-center mt-4 shadow-sm border-0">
-            <span>Purchased: <strong>{{ just_bought }}</strong></span>
-            <a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-sm"><i class="fas fa-undo me-1"></i> Undo</a>
-        </div>
-        {% endif %}
     {% endif %}
 </div>
+
+{% if just_bought %}
+<div class="fixed-transaction-bar p-3 bg-white border-top shadow-lg">
+    <div class="container">
+        <div class="alert alert-success d-flex justify-content-between align-items-center m-0 py-3 border-0">
+            <span class="fs-5">Purchased: <strong>{{ just_bought }}</strong></span>
+            <a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-lg px-4"><i class="fas fa-undo me-2"></i> Undo Purchase</a>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% if user and user.is_admin %}
 <div class="modal fade" id="adminModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-                <ul class="nav nav-pills" id="adminTabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active" id="pins-tab" data-bs-toggle="pill" data-bs-target="#pins" type="button">PINs</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link" id="stock-tab" data-bs-toggle="pill" data-bs-target="#stock" type="button">Stockroom</button>
-                    </li>
+            <div class="modal-header border-0 pb-0">
+                <ul class="nav nav-pills" id="adminTabs">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pins">PINs</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#stock">Stockroom</button></li>
                 </ul>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -124,7 +126,7 @@
                                     <td>{% if s.pin %}<span class="badge bg-success">Active</span>{% else %}None{% endif %}</td>
                                     <td>
                                         {% if s.pin %}
-                                        <button onclick="if(confirm('Reset {{ s.first_name }}?')) window.location.href='{{ url_for('main.admin_reset_pin', target_id=s.user_id) }}';" class="btn btn-sm btn-danger">Reset</button>
+                                        <button onclick="if(confirm('Reset {{ s.first_name }}?')) window.location.href='{{ url_for('main.admin_reset_pin', target_id=s.user_id) }}';" class="btn btn-sm btn-danger">Reset PIN</button>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -136,13 +138,13 @@
                         <form action="{{ url_for('main.update_stock') }}" method="POST">
                             <div class="mb-3">
                                 <label class="form-label">Scan Barcode</label>
-                                <input type="text" name="barcode" class="form-control" id="stockBarcode" autofocus>
+                                <input type="text" name="barcode" class="form-control" id="stockBarcode">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Quantity to Add</label>
                                 <input type="number" name="quantity" class="form-control" value="10">
                             </div>
-                            <button type="submit" class="btn btn-primary w-100">Restock Item</button>
+                            <button type="submit" class="btn btn-primary w-100 py-2">Update Stock</button>
                         </form>
                     </div>
                 </div>
@@ -214,11 +216,13 @@
         });
     }
 
-    // Auto-focus barcode scanner in Stockroom tab
-    const stockTab = document.getElementById('stock-tab');
-    if (stockTab) {
-        stockTab.addEventListener('shown.bs.tab', () => {
-            document.getElementById('stockBarcode').focus();
+    const adminModal = document.getElementById('adminModal');
+    if (adminModal) {
+        adminModal.addEventListener('shown.bs.modal', function () {
+            const stockTab = document.querySelector('[data-bs-target="#stock"]');
+            if (stockTab && stockTab.classList.contains('active')) {
+                document.getElementById('stockBarcode').focus();
+            }
         });
     }
 
