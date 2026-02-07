@@ -34,9 +34,15 @@ def index():
         last_t = Transactions.query.filter_by(user_id=current_user.user_id).order_by(Transactions.transaction_date.desc()).first()
         if last_t:
             last_item = Products.query.get(last_t.upc_code)
+            
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
-    quick_items = Quick_Items.query.all()
-    return render_template('index.html', user=current_user, users=vips, quick_items=quick_items, last_item=last_item)
+    
+    # Logic to fetch unit prices for the dashboard
+    quick_data = db.session.query(Quick_Items, Products.price).join(
+        Products, Quick_Items.barcode_val == Products.upc_code
+    ).all()
+    
+    return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, last_item=last_item)
 
 @main.route('/all-staff')
 def all_users():
@@ -53,6 +59,7 @@ def undo():
             u.balance = Decimal(str(u.balance)) + Decimal(str(lt.amount))
             db.session.delete(lt)
             db.session.commit()
+            flash("Purchase Undone.", "info")
     return redirect(url_for('main.index'))
 
 @main.route('/manual/<barcode>')
