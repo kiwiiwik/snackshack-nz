@@ -11,7 +11,6 @@ def process_barcode(barcode):
     
     # LOGIN LOGIC
     if user:
-        # If user has a PIN, we don't log them in yet; we tell the frontend to ask for it
         if user.pin:
             return {"status": "needs_pin", "user_id": user.user_id}
         
@@ -97,6 +96,19 @@ def scan():
     if result["status"] == "needs_pin":
         return redirect(url_for('main.index', needs_pin=result["user_id"]))
     return redirect(url_for('main.index', bought=result.get("description")))
+
+@main.route('/undo')
+def undo():
+    if 'user_id' in session:
+        uid = int(session['user_id'])
+        lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
+        if lt:
+            u = Users.query.get(uid)
+            u.balance = Decimal(str(u.balance)) + Decimal(str(lt.amount))
+            db.session.delete(lt)
+            db.session.commit()
+            flash("Purchase Undone.", "info")
+    return redirect(url_for('main.index'))
 
 @main.route('/logout')
 def logout():

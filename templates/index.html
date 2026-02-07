@@ -92,7 +92,6 @@
 </form>
 
 <script>
-    // AUTO-LOGOUT LOGIC
     {% if user %}
     let timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 10000);
     window.onclick = window.onkeydown = () => { 
@@ -101,7 +100,6 @@
     };
     {% endif %}
 
-    // PIN MANAGEMENT LOGIC
     function handlePin(action) {
         if (action === 'remove') {
             if (confirm("Remove your PIN?")) window.location.href = "{{ url_for('main.update_pin', action='remove') }}";
@@ -113,7 +111,6 @@
         }
     }
 
-    // PIN LOGIN INTERCEPTION
     {% if request.args.get('needs_pin') %}
         const pin = prompt("This account is protected. Enter PIN:");
         if (pin) {
@@ -125,7 +122,6 @@
         }
     {% endif %}
 
-    // BARCODE FOCUS
     document.addEventListener("click", (e) => { 
         if (!['INPUT', 'A', 'BUTTON'].includes(e.target.tagName)) document.getElementById("barcode").focus(); 
     });
