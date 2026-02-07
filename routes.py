@@ -12,7 +12,7 @@ def process_barcode(barcode):
         session['user_id'] = int(user.user_id)
         user.last_seen = datetime.utcnow()
         db.session.commit()
-        return None # User logged in, no item purchased yet
+        return None # Logged in, no purchase yet
 
     if 'user_id' in session:
         product = Products.query.filter_by(upc_code=barcode).first()
@@ -23,20 +23,20 @@ def process_barcode(barcode):
             new_t = Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price)
             db.session.add(new_t)
             db.session.commit()
-            return product.description # Return the description for the alert bar
+            return product.description # Return name for the alert bar
     return None
 
 @main.route('/')
 def index():
     current_user = None
-    just_bought = request.args.get('bought') # Capture the item name from the URL redirect
+    just_bought = request.args.get('bought') # Only has a value after a click
     
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
 
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
     
-    # JOIN Quick_Items with Products to get the Full Description and Price
+    # JOIN to get Full Description and Price for the buttons
     quick_data = db.session.query(Quick_Items, Products.description, Products.price).join(
         Products, Quick_Items.barcode_val == Products.upc_code
     ).all()
@@ -48,7 +48,6 @@ def manual_add(barcode=None):
     bought_item = None
     if barcode: 
         bought_item = process_barcode(barcode)
-    # Redirect back to index, carrying the name of the bought item if it exists
     return redirect(url_for('main.index', bought=bought_item))
 
 @main.route('/scan', methods=['POST'])
