@@ -28,8 +28,9 @@ class Transactions(db.Model):
     transaction_date = db.Column(db.DateTime, default=datetime.utcnow)
 
 class Quick_Items(db.Model):
-    __tablename__ = 'Quick_Items' # Fixes the "quick__items" not found error
-    id = db.Column(db.Integer, primary_key=True)
+    __tablename__ = 'Quick_Items'
+    # Change 'id' to 'Quick_Item_ID' (or whatever your SQL column is actually named)
+    quick_item_id = db.Column('Quick_Item_ID', db.Integer, primary_key=True) 
     label = db.Column(db.String(50))
     barcode_val = db.Column(db.String(50))
     image_url = db.Column(db.String(255))
