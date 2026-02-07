@@ -23,6 +23,13 @@
         <div class="d-flex align-items-center">
             <span class="me-3">Hi, <strong>{{ user.first_name }}</strong></span>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 me-3">${{ "%.2f"|format(user.balance) }}</span>
+            
+            {% if user.pin %}
+                <button onclick="handlePin('remove')" class="btn btn-sm btn-warning me-2"><i class="fas fa-unlock"></i> Remove PIN</button>
+            {% else %}
+                <button onclick="handlePin('set')" class="btn btn-sm btn-info me-2"><i class="fas fa-lock"></i> Set PIN</button>
+            {% endif %}
+
             <a href="{{ url_for('main.logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
         </div>
         {% endif %}
@@ -43,12 +50,12 @@
                     <div class="card h-100 p-4 user-tile text-center shadow-sm">
                         <div class="initial-avatar">{{ u.first_name[0] }}</div>
                         <div class="fw-bold">{{ u.first_name }} {{ u.last_name }}</div>
+                        {% if u.pin %}<div class="text-muted small mt-1"><i class="fas fa-lock"></i></div>{% endif %}
                     </div>
                 </a>
             </div>
             {% endfor %}
         </div>
-        <div class="text-center"><a href="{{ url_for('main.all_users') }}" class="btn btn-light border shadow-sm">Find Other Staff...</a></div>
     {% else %}
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-4">
             {% for item, description, price in quick_items %}
@@ -79,15 +86,46 @@
     </div>
 </div>
 
+<form id="pinForm" action="{{ url_for('main.verify_pin') }}" method="POST" style="display: none;">
+    <input type="hidden" name="user_id" id="pin_user_id">
+    <input type="hidden" name="pin" id="pin_value">
+</form>
+
 <script>
+    // AUTO-LOGOUT LOGIC
     {% if user %}
     let timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 10000);
-    window.onmousemove = window.onclick = window.onkeydown = () => { 
+    window.onclick = window.onkeydown = () => { 
         clearTimeout(timeout); 
         timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 10000); 
     };
     {% endif %}
-    // Keeping focus on the hidden box so a physical scanner still works in the background
+
+    // PIN MANAGEMENT LOGIC
+    function handlePin(action) {
+        if (action === 'remove') {
+            if (confirm("Remove your PIN?")) window.location.href = "{{ url_for('main.update_pin', action='remove') }}";
+        } else {
+            const newPin = prompt("Set a 4-digit PIN:");
+            if (newPin && /^\d{4}$/.test(newPin)) {
+                window.location.href = "{{ url_for('main.update_pin', action='set') }}?pin=" + newPin;
+            } else if (newPin) alert("Invalid PIN. Must be 4 digits.");
+        }
+    }
+
+    // PIN LOGIN INTERCEPTION
+    {% if request.args.get('needs_pin') %}
+        const pin = prompt("This account is protected. Enter PIN:");
+        if (pin) {
+            document.getElementById('pin_user_id').value = "{{ request.args.get('needs_pin') }}";
+            document.getElementById('pin_value').value = pin;
+            document.getElementById('pinForm').submit();
+        } else {
+            window.location.href = "/";
+        }
+    {% endif %}
+
+    // BARCODE FOCUS
     document.addEventListener("click", (e) => { 
         if (!['INPUT', 'A', 'BUTTON'].includes(e.target.tagName)) document.getElementById("barcode").focus(); 
     });
