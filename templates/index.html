@@ -11,16 +11,17 @@
         .user-tile:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .initial-avatar { width: 70px; height: 70px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.5rem; }
         .product-img { width: 100%; height: 120px; object-fit: contain; padding: 10px; }
-        .price-badge { font-size: 0.9rem; color: #198754; font-weight: bold; }
+        .price-badge { font-size: 1rem; color: #198754; font-weight: bold; }
     </style>
 </head>
 <body>
+
 <nav class="navbar navbar-light bg-white shadow-sm mb-4">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/">🥝 Snack Shack</a>
         {% if user %}
         <div class="d-flex align-items-center">
-            <span class="me-3">Logged in: <strong>{{ user.first_name }}</strong></span>
+            <span class="me-3">Hi, <strong>{{ user.first_name }}</strong></span>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 me-3">${{ "%.2f"|format(user.balance) }}</span>
             <a href="{{ url_for('main.logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
         </div>
@@ -29,10 +30,6 @@
 </nav>
 
 <div class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} text-center shadow-sm">{{ msg }}</div>{% endfor %}{% endif %}
-    {% endwith %}
-
     {% if not user %}
         <h4 class="text-center mb-5 text-secondary">Select User (Auckland Office)</h4>
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4 mb-5">
@@ -50,12 +47,12 @@
         <div class="text-center"><a href="{{ url_for('main.all_users') }}" class="btn btn-light border shadow-sm">Find Other Staff...</a></div>
     {% else %}
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-4">
-            {% for item, price in quick_items %}
+            {% for item, description, price in quick_items %}
             <div class="col">
                 <a href="{{ url_for('main.manual_add', barcode=item.barcode_val) }}" class="text-decoration-none text-dark">
                     <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile">
-                        <img src="{{ url_for('static', filename='images/' + item.image_url) }}" class="product-img mb-1">
-                        <div class="fw-bold small">{{ item.label }}</div>
+                        <img src="{{ url_for('static', filename='images/' + item.image_url) }}" class="product-img mb-2">
+                        <div class="fw-bold small">{{ description }}</div>
                         <div class="price-badge">${{ "%.2f"|format(price) }}</div>
                     </div>
                 </a>
@@ -63,17 +60,18 @@
             {% endfor %}
         </div>
 
-        {% if last_item %}
-        <div class="alert alert-info d-flex justify-content-between align-items-center mt-4 shadow-sm">
-            <span>Purchased: <strong>{{ last_item.description }}</strong> (${{ "%.2f"|format(last_item.price) }})</span>
-            <a href="{{ url_for('main.undo') }}" class="btn btn-danger btn-sm"><i class="fas fa-undo me-1"></i> Undo</a>
+        {% if just_bought %}
+        <div class="alert alert-success d-flex justify-content-between align-items-center mt-4 shadow-sm border-0">
+            <span>Purchased: <strong>{{ just_bought }}</strong></span>
+            <a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-sm"><i class="fas fa-undo me-1"></i> Undo</a>
         </div>
         {% endif %}
     {% endif %}
 
     <div class="mt-5 mb-5 text-center">
         <form action="{{ url_for('main.scan') }}" method="POST">
-            <input type="text" name="barcode" id="barcode" class="form-control text-center py-3 shadow-sm" placeholder="Scan Barcode..." autofocus autocomplete="off">
+            <input type="text" name="barcode" id="barcode" class="form-control text-center py-3 shadow-sm" 
+                   placeholder="Scan Barcode..." autofocus autocomplete="off">
         </form>
     </div>
 </div>

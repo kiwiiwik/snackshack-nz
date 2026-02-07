@@ -12,7 +12,8 @@ def process_barcode(barcode):
         session['user_id'] = int(user.user_id)
         user.last_seen = datetime.utcnow()
         db.session.commit()
-        return True
+        return None # User logged in, no item purchased yet
+
     if 'user_id' in session:
         product = Products.query.filter_by(upc_code=barcode).first()
         if product:
@@ -22,27 +23,41 @@ def process_barcode(barcode):
             new_t = Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price)
             db.session.add(new_t)
             db.session.commit()
-            return True
-    return False
+            return product.description # Return the description for the alert bar
+    return None
 
 @main.route('/')
 def index():
     current_user = None
-    last_item = None
+    just_bought = request.args.get('bought') # Capture the item name from the URL redirect
+    
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
-        last_t = Transactions.query.filter_by(user_id=current_user.user_id).order_by(Transactions.transaction_date.desc()).first()
-        if last_t:
-            last_item = Products.query.get(last_t.upc_code)
-            
+
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
     
-    # Logic to fetch unit prices for the dashboard
-    quick_data = db.session.query(Quick_Items, Products.price).join(
+    # JOIN Quick_Items with Products to get the Full Description and Price
+    quick_data = db.session.query(Quick_Items, Products.description, Products.price).join(
         Products, Quick_Items.barcode_val == Products.upc_code
     ).all()
     
-    return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, last_item=last_item)
+    return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, just_bought=just_bought)
+
+@main.route('/manual/<barcode>')
+def manual_add(barcode=None):
+    bought_item = None
+    if barcode: 
+        bought_item = process_barcode(barcode)
+    # Redirect back to index, carrying the name of the bought item if it exists
+    return redirect(url_for('main.index', bought=bought_item))
+
+@main.route('/scan', methods=['POST'])
+def scan():
+    barcode = request.form.get('barcode')
+    bought_item = None
+    if barcode: 
+        bought_item = process_barcode(barcode)
+    return redirect(url_for('main.index', bought=bought_item))
 
 @main.route('/all-staff')
 def all_users():
@@ -60,17 +75,6 @@ def undo():
             db.session.delete(lt)
             db.session.commit()
             flash("Purchase Undone.", "info")
-    return redirect(url_for('main.index'))
-
-@main.route('/manual/<barcode>')
-def manual_add(barcode=None):
-    if barcode: process_barcode(barcode)
-    return redirect(url_for('main.index'))
-
-@main.route('/scan', methods=['POST'])
-def scan():
-    barcode = request.form.get('barcode')
-    if barcode: process_barcode(barcode)
     return redirect(url_for('main.index'))
 
 @main.route('/logout')
