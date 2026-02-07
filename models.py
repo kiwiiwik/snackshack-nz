@@ -29,7 +29,8 @@ class Transactions(db.Model):
 
 class Quick_Items(db.Model):
     __tablename__ = 'Quick_Items'
-    item_id = db.Column('Item_ID', db.Integer, primary_key=True) # MATCHES SCHEMA
+    # Fixed to match your exact SQL schema
+    item_id = db.Column('Item_ID', db.Integer, primary_key=True) 
     label = db.Column('Label', db.String(50))
-    barcode_val = db.Column('Barcode_Value', db.String(50)) # MATCHES SCHEMA
+    barcode_val = db.Column('Barcode_Value', db.String(50)) 
     image_url = db.Column('Image_URL', db.String(255))
