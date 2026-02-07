@@ -23,11 +23,8 @@ def process_barcode(barcode):
             u = Users.query.get(int(session['user_id']))
             price = Decimal(str(product.price or 0.0))
             u.balance = Decimal(str(u.balance or 0.0)) - price
-            
-            # Reduce Stock on Hand (SOH)
             if product.stock_level > 0:
                 product.stock_level -= 1
-                
             new_t = Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price)
             db.session.add(new_t)
             db.session.commit()
@@ -37,18 +34,18 @@ def process_barcode(barcode):
 @main.route('/')
 def index():
     current_user = None
-    just_bought = request.args.get('bought')
+    all_staff = None
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
+        if current_user and current_user.is_admin:
+            all_staff = Users.query.order_by(Users.first_name).all()
 
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
-    
-    # Query modified to get the full Product object for the tiles
     quick_data = db.session.query(Quick_Items, Products).join(
         Products, Quick_Items.barcode_val == Products.upc_code
     ).all()
     
-    return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, just_bought=just_bought)
+    return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, staff=all_staff)
 
 @main.route('/verify-pin', methods=['POST'])
 def verify_pin():
@@ -63,6 +60,18 @@ def verify_pin():
     else:
         flash("Incorrect PIN.", "danger")
         return redirect(url_for('main.index'))
+
+@main.route('/admin/reset-pin/<int:target_id>')
+def admin_reset_pin(target_id):
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    admin = Users.query.get(int(session['user_id']))
+    if admin and admin.is_admin:
+        target_user = Users.query.get(target_id)
+        if target_user:
+            target_user.pin = None
+            db.session.commit()
+            flash(f"PIN for {target_user.first_name} has been cleared.", "success")
+    return redirect(url_for('main.index'))
 
 @main.route('/update-pin/<action>', methods=['GET', 'POST'])
 def update_pin(action):
@@ -106,7 +115,7 @@ def undo():
             u = Users.query.get(uid)
             p = Products.query.get(lt.upc_code)
             u.balance = Decimal(str(u.balance)) + Decimal(str(lt.amount))
-            if p: p.stock_level += 1 # Restore stock
+            if p: p.stock_level += 1
             db.session.delete(lt)
             db.session.commit()
             flash("Purchase Undone.", "info")

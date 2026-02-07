@@ -13,9 +13,8 @@
         .product-img { width: 100%; height: 100px; object-fit: contain; padding: 5px; }
         .price-text { color: #198754; font-weight: bold; font-size: 1rem; }
         .soh-badge { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; padding: 4px 8px; border-radius: 10px; }
+        .admin-badge { position: absolute; top: 10px; left: 10px; color: #ffc107; font-size: 1rem; }
         .meta-text { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-
-        /* KEYPAD STYLES */
         .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 0 auto; }
         .key-btn { height: 70px; font-size: 1.5rem; font-weight: bold; border-radius: 12px; border: 1px solid #dee2e6; background: white; transition: 0.1s; }
         .key-btn:active { background: #e9ecef; transform: scale(0.95); }
@@ -29,6 +28,11 @@
         <a class="navbar-brand fw-bold" href="/">🥝 Snack Shack</a>
         {% if user %}
         <div class="d-flex align-items-center">
+            {% if user.is_admin %}
+                <button class="btn btn-sm btn-outline-dark me-3" data-bs-toggle="modal" data-bs-target="#adminModal">
+                    <i class="fas fa-user-shield me-1"></i> Admin Tools
+                </button>
+            {% endif %}
             <span class="me-3">Hi, <strong>{{ user.first_name }}</strong></span>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 me-3">${{ "%.2f"|format(user.balance) }}</span>
             {% if user.pin %}
@@ -54,6 +58,7 @@
             <div class="col">
                 <a href="{{ url_for('main.manual_add', barcode=u.card_id or '') }}" class="text-decoration-none text-dark">
                     <div class="card h-100 p-4 user-tile text-center shadow-sm">
+                        {% if u.is_admin %}<i class="fas fa-shield-alt admin-badge" title="Admin User"></i>{% endif %}
                         <div class="initial-avatar">{{ u.first_name[0] }}</div>
                         <div class="fw-bold">{{ u.first_name }} {{ u.last_name }}</div>
                         {% if u.pin %}<div class="text-muted small mt-1"><i class="fas fa-lock"></i></div>{% endif %}
@@ -71,20 +76,16 @@
                         <span class="badge soh-badge {{ 'bg-danger' if p.stock_level < 5 else 'bg-light text-dark border' }}">
                             {{ p.stock_level }} left
                         </span>
-                        
                         <img src="{{ url_for('static', filename='images/' + item.image_url) }}" class="product-img mb-2">
-                        
                         <div class="meta-text">{{ p.manufacturer }}</div>
                         <div class="fw-bold small">{{ p.description }}</div>
                         <div class="meta-text mb-2">{{ p.size }}</div>
-                        
                         <div class="price-text">${{ "%.2f"|format(p.price) }}</div>
                     </div>
                 </a>
             </div>
             {% endfor %}
         </div>
-
         {% if just_bought %}
         <div class="alert alert-success d-flex justify-content-between align-items-center mt-4 shadow-sm border-0">
             <span>Purchased: <strong>{{ just_bought }}</strong></span>
@@ -92,13 +93,39 @@
         </div>
         {% endif %}
     {% endif %}
+</div>
 
-    <div style="display: none;">
-        <form action="{{ url_for('main.scan') }}" method="POST">
-            <input type="text" name="barcode" id="barcode" autofocus autocomplete="off">
-        </form>
+{% if user and user.is_admin %}
+<div class="modal fade" id="adminModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">PIN Management</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="staffSearch" class="form-control mb-3 rounded-pill" placeholder="Search staff by name...">
+                <table class="table align-middle">
+                    <thead><tr><th>Name</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="staffTable">
+                        {% for s in staff %}
+                        <tr class="staff-row">
+                            <td class="staff-name">{{ s.first_name }} {{ s.last_name }}</td>
+                            <td>{% if s.pin %}<span class="badge bg-success">PIN Active</span>{% else %}<span class="badge bg-light text-dark">No PIN</span>{% endif %}</td>
+                            <td>
+                                {% if s.pin %}
+                                <button onclick="if(confirm('Reset PIN for {{ s.first_name }}?')) window.location.href='{{ url_for('main.admin_reset_pin', target_id=s.user_id) }}';" class="btn btn-sm btn-danger rounded-pill px-3">Reset PIN</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
+{% endif %}
 
 <div class="modal fade" id="keypadModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
@@ -131,6 +158,12 @@
     <input type="hidden" name="pin" id="pin_value">
 </form>
 
+<div style="display: none;">
+    <form action="{{ url_for('main.scan') }}" method="POST">
+        <input type="text" name="barcode" id="barcode" autofocus autocomplete="off">
+    </form>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let currentInput = "";
@@ -144,6 +177,18 @@
         timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 10000);
     });
     {% endif %}
+
+    // Admin Search Logic
+    const searchInput = document.getElementById('staffSearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            document.querySelectorAll('.staff-row').forEach(row => {
+                const name = row.querySelector('.staff-name').textContent.toLowerCase();
+                row.style.display = name.includes(term) ? "" : "none";
+            });
+        });
+    }
 
     function openKeypad(mode, userId = null) {
         keypadMode = mode;
