@@ -46,13 +46,12 @@ def index():
     last_item = None
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
-        # Fetch the most recent transaction for this user
+        # Fetch latest transaction for Undo functionality
         last_t = Transactions.query.filter_by(user_id=current_user.user_id).order_by(Transactions.transaction_date.desc()).first()
         if last_t:
-            # Map transaction back to product to get the description
             last_item = Products.query.get(last_t.upc_code)
 
-    # Fetch 6x5 grid tiles
+    # Fetch 6x5 grid tiles for the Auckland office
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
     quick_items = Quick_Items.query.all()
     
@@ -71,11 +70,10 @@ def all_users():
 def undo():
     if 'user_id' in session:
         uid = int(session['user_id'])
-        # Find absolute latest transaction to reverse
+        # Find latest transaction to reverse
         lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
         if lt:
             u = Users.query.get(uid)
-            # Refund balance
             u.balance = Decimal(str(u.balance)) + Decimal(str(lt.amount))
             db.session.delete(lt)
             db.session.commit()

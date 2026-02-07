@@ -80,9 +80,7 @@
         {% if last_item %}
         <div class="alert alert-info d-flex justify-content-between align-items-center shadow-sm mt-4">
             <span>Last purchased: <strong>{{ last_item.description }}</strong></span>
-            <a href="{{ url_for('main.undo') }}" class="btn btn-danger btn-sm">
-                <i class="fas fa-undo me-1"></i> Undo Purchase
-            </a>
+            <a href="{{ url_for('main.undo') }}" class="btn btn-danger btn-sm">Undo Purchase</a>
         </div>
         {% endif %}
 
@@ -97,24 +95,23 @@
 </div>
 
 <script>
-    // 10-Second Auto-Logout
+    // 10-Second Auto-Logout logic
     {% if user %}
     let timeout;
     function resetTimer() {
         clearTimeout(timeout);
         timeout = setTimeout(() => {
             window.location.href = "{{ url_for('main.logout') }}";
-        }, 10000); // 10 seconds
+        }, 10000); 
     }
     window.onload = resetTimer;
     window.onmousemove = resetTimer;
     window.onmousedown = resetTimer; 
-    window.ontouchstart = resetTimer;
     window.onclick = resetTimer;     
     window.onkeydown = resetTimer;   
     {% endif %}
 
-    // Maintain focus for the physical scanner
+    // Maintain focus for the physical scanner on the Auckland monitor
     document.addEventListener("click", function(e) {
         if (!['INPUT', 'A', 'BUTTON', 'I'].includes(e.target.tagName)) {
             document.getElementById("barcode").focus();
