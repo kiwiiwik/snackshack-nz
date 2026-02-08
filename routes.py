@@ -156,6 +156,20 @@ def manual_add(barcode=None):
     res = process_barcode(barcode)
     return redirect(url_for('main.index', bought=res.get("description"))) if res["status"] != "needs_pin" else redirect(url_for('main.index', needs_pin=res["user_id"]))
 
+
+@main.route('/scan', methods=['POST'])
+def scan():
+    barcode = request.form.get('barcode', '').strip()
+    res = process_barcode(barcode)
+
+    if res.get('status') == 'needs_pin':
+        return redirect(url_for('main.index', needs_pin=res.get('user_id')))
+
+    if res.get('status') == 'purchased':
+        return redirect(url_for('main.index', bought=res.get('description')))
+
+    return redirect(url_for('main.index'))
+
 @main.route('/logout')
 def logout():
     session.pop('user_id', None)
