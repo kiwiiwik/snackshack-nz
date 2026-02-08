@@ -14,13 +14,14 @@
         .price-text { color: #198754; font-weight: bold; font-size: 1rem; }
         .soh-badge { position: absolute; top: 10px; right: 10px; font-size: 0.75rem; padding: 4px 8px; border-radius: 10px; }
         .admin-badge { position: absolute; top: 10px; left: 10px; color: #ffc107; font-size: 1rem; }
-        .meta-text { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-        .keypad-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 300px; margin: 0 auto; }
-        .key-btn { height: 70px; font-size: 1.5rem; font-weight: bold; border-radius: 12px; border: 1px solid #dee2e6; background: white; transition: 0.1s; }
-        .key-btn:active { background: #e9ecef; transform: scale(0.95); }
-        .pin-dots { font-size: 2rem; letter-spacing: 15px; color: #0d6efd; height: 50px; }
+        
+        .audit-btn-large { height: 110px; font-size: 1.2rem; font-weight: bold; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; border: none; width: 100%; }
+        .num-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .num-btn { height: 60px; font-size: 1.3rem; font-weight: bold; border-radius: 10px; border: 1px solid #dee2e6; background: white; }
+        .num-btn:active { background: #e9ecef; }
+        .field-label { font-size: 0.7rem; font-weight: bold; color: #6c757d; text-transform: uppercase; margin-bottom: 2px; }
         .fixed-transaction-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1030; }
-        .audit-list { max-height: 300px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px; }
+        .recent-audit-item { font-size: 0.85rem; border-left: 4px solid #198754; background: #fdfdfd; padding: 8px; margin-bottom: 8px; border-radius: 0 8px 8px 0; }
     </style>
 </head>
 <body>
@@ -37,11 +38,6 @@
             {% endif %}
             <span class="me-3">Hi, <strong>{{ user.first_name }}</strong></span>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 me-3">${{ "%.2f"|format(user.balance) }}</span>
-            {% if user.pin %}
-                <button onclick="openKeypad('remove')" class="btn btn-sm btn-warning me-2"><i class="fas fa-unlock"></i> Remove PIN</button>
-            {% else %}
-                <button onclick="openKeypad('set')" class="btn btn-sm btn-info me-2"><i class="fas fa-lock"></i> Set PIN</button>
-            {% endif %}
             <a href="{{ url_for('main.logout') }}" class="btn btn-sm btn-outline-danger">Logout</a>
         </div>
         {% endif %}
@@ -63,7 +59,6 @@
                         {% if u.is_admin %}<i class="fas fa-shield-alt admin-badge"></i>{% endif %}
                         <div class="initial-avatar">{{ u.first_name[0] }}</div>
                         <div class="fw-bold">{{ u.first_name }} {{ u.last_name }}</div>
-                        {% if u.pin %}<div class="text-muted small mt-1"><i class="fas fa-lock"></i></div>{% endif %}
                     </div>
                 </a>
             </div>
@@ -75,15 +70,11 @@
             <div class="col">
                 <a href="{{ url_for('main.manual_add', barcode=p.upc_code) }}" class="text-decoration-none text-dark">
                     <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile">
-                        <span class="badge soh-badge {{ 'bg-danger' if p.stock_level < 5 else 'bg-light text-dark border' }}">
-                            {{ p.stock_level }} left
-                        </span>
-                        <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" 
-                             class="product-img mb-2" 
-                             onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder.png') }}';">
-                        <div class="meta-text">{{ p.manufacturer }}</div>
+                        <span class="badge soh-badge {{ 'bg-danger' if p.stock_level < 5 else 'bg-light text-dark border' }}">{{ p.stock_level }} left</span>
+                        <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';">
+                        <div style="font-size: 0.7rem; color: #6c757d; text-transform: uppercase;">{{ p.manufacturer }}</div>
                         <div class="fw-bold small">{{ p.description }}</div>
-                        <div class="meta-text mb-2">{{ p.size }}</div>
+                        <div style="font-size: 0.7rem; color: #6c757d;">{{ p.size }}</div>
                         <div class="price-text">${{ "%.2f"|format(p.price) }}</div>
                     </div>
                 </a>
@@ -95,78 +86,97 @@
 
 {% if just_bought %}
 <div class="fixed-transaction-bar p-3 bg-white border-top shadow-lg">
-    <div class="container">
-        <div class="alert alert-success d-flex justify-content-between align-items-center m-0 py-3 border-0">
-            <span class="fs-5">Purchased: <strong>{{ just_bought }}</strong></span>
-            <a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-lg px-4"><i class="fas fa-undo me-2"></i> Undo Purchase</a>
-        </div>
+    <div class="container d-flex justify-content-between align-items-center">
+        <span class="fs-5">Purchased: <strong>{{ just_bought }}</strong></span>
+        <a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-lg">Undo Purchase</a>
     </div>
 </div>
 {% endif %}
 
 {% if user and user.is_admin %}
 <div class="modal fade" id="adminModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
             <div class="modal-header border-0 pb-0">
-                <ul class="nav nav-pills" id="adminTabs">
-                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pins">PINs</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#stock">Restock</button></li>
-                    <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#audit">Full Audit</button></li>
-                </ul>
+                <h5 class="fw-bold"><i class="fas fa-clipboard-check me-2 text-primary"></i> Audit Station</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="tab-content">
-                    <div class="tab-pane fade show active" id="pins">
-                        <input type="text" id="staffSearch" class="form-control mb-3 rounded-pill" placeholder="Search staff...">
-                        <table class="table align-middle">
-                            <tbody id="staffTable">
-                                {% for s in staff %}
-                                <tr class="staff-row">
-                                    <td class="staff-name">{{ s.first_name }} {{ s.last_name }}</td>
-                                    <td>{% if s.pin %}<span class="badge bg-success">Active</span>{% else %}None{% endif %}</td>
-                                    <td>{% if s.pin %}<button onclick="if(confirm('Reset {{ s.first_name }}?')) window.location.href='{{ url_for('main.admin_reset_pin', target_id=s.user_id) }}';" class="btn btn-sm btn-danger">Reset PIN</button>{% endif %}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="tab-pane fade" id="stock">
-                        <form action="{{ url_for('main.update_stock') }}" method="POST">
-                            <div class="mb-3"><label class="form-label">Scan Barcode</label><input type="text" name="barcode" class="form-control" id="stockBarcode"></div>
-                            <div class="mb-3"><label class="form-label">Quantity to Add</label><input type="number" name="quantity" class="form-control" value="10"></div>
-                            <button type="submit" class="btn btn-primary w-100 py-2">Update Stock</button>
-                        </form>
-                    </div>
-                    <div class="tab-pane fade" id="audit">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold m-0">Stocktake Audit</h6>
-                            <a href="{{ url_for('main.export_snapshot') }}" class="btn btn-sm btn-outline-dark"><i class="fas fa-file-download me-1"></i> Export Snapshot</a>
-                        </div>
-                        <input type="text" id="auditSearch" class="form-control rounded-pill mb-2" placeholder="Search products...">
-                        <div class="audit-list">
-                            <table class="table table-sm table-hover align-middle m-0">
-                                <tbody id="auditTable">
-                                    {% for p in products %}
-                                    <tr class="audit-row" data-barcode="{{ p.upc_code }}">
-                                        <td class="audit-name"><strong>{{ p.manufacturer }}</strong> {{ p.description }}</td>
-                                        <td class="text-end"><button type="button" onclick="selectAuditItem('{{ p.upc_code }}', '{{ p.description }}')" class="btn btn-sm btn-outline-primary px-3">Select</button></td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        <form action="{{ url_for('main.audit_submit') }}" method="POST" id="auditForm" class="p-3 bg-light rounded border mt-3" style="display:none;">
-                            <h6 id="auditTargetName" class="fw-bold text-primary"></h6>
-                            <input type="hidden" name="barcode" id="auditTargetBarcode">
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold">Actual Count</label>
-                                <input type="text" name="new_count" class="form-control form-control-lg" id="auditCountInput" placeholder="e.g. 12 or 2*24">
-                                <div id="auditCalcResult" class="text-success small mt-1 fw-bold"></div>
+            <div class="modal-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <button onclick="focusScan()" class="audit-btn-large bg-danger mb-2 shadow-sm">
+                            <i class="fas fa-barcode mb-1"></i> Scan Barcode
+                        </button>
+                        <button onclick="generatePLU()" class="audit-btn-large bg-dark mb-4 shadow-sm">
+                            <i class="fas fa-plus-circle mb-1"></i> No Barcode?
+                        </button>
+                        <div class="bg-light p-3 rounded shadow-sm">
+                            <div class="num-pad">
+                                <button class="num-btn" onclick="numPress('1')">1</button><button class="num-btn" onclick="numPress('2')">2</button><button class="num-btn" onclick="numPress('3')">3</button>
+                                <button class="num-btn" onclick="numPress('4')">4</button><button class="num-btn" onclick="numPress('5')">5</button><button class="num-btn" onclick="numPress('6')">6</button>
+                                <button class="num-btn" onclick="numPress('7')">7</button><button class="num-btn" onclick="numPress('8')">8</button><button class="num-btn" onclick="numPress('9')">9</button>
+                                <button class="num-btn" onclick="numPress('0')">0</button><button class="num-btn text-primary" onclick="numPress('*')">x</button><button class="num-btn text-danger" onclick="numPress('C')">C</button>
                             </div>
-                            <button type="submit" class="btn btn-success w-100 py-2">SAVE POINT OF TRUTH</button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <form action="{{ url_for('main.audit_submit') }}" method="POST" id="auditForm">
+                            <div class="card border-0 bg-white shadow-sm p-4 h-100">
+                                <div class="mb-3">
+                                    <div class="field-label">UPC / PLU Code</div>
+                                    <input type="text" name="barcode" id="auditBarcode" class="form-control form-control-lg bg-light fw-bold" readonly>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6"><div class="field-label">Brand</div><input type="text" name="manufacturer" id="auditMfg" class="form-control"></div>
+                                    <div class="col-6"><div class="field-label">Size</div><input type="text" name="size" id="auditSize" class="form-control"></div>
+                                </div>
+                                <div class="mb-4"><div class="field-label">Item Description</div><input type="text" name="description" id="auditDesc" class="form-control form-control-lg"></div>
+
+                                <div class="row g-3 mb-4">
+                                    <div class="col-6">
+                                        <div class="field-label text-center">Qty per Pack</div>
+                                        <input type="text" id="auditPackQty" class="form-control form-control-lg text-center fw-bold" readonly placeholder="1">
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="field-label text-center">Num Packs</div>
+                                        <input type="text" id="auditNumPacks" class="form-control form-control-lg text-center fw-bold" readonly placeholder="0">
+                                    </div>
+                                </div>
+
+                                <div class="text-center p-3 bg-primary bg-opacity-10 rounded mb-4">
+                                    <div class="field-label text-primary">Final Count</div>
+                                    <input type="hidden" name="final_count" id="auditFinalCount" value="0">
+                                    <h1 class="display-4 fw-bold text-primary m-0" id="auditDisplayTotal">0</h1>
+                                </div>
+
+                                <button type="submit" class="audit-btn-large bg-success shadow py-4">
+                                    <i class="fas fa-save mb-2"></i> SAVE POINT OF TRUTH
+                                </button>
+                            </div>
                         </form>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold m-0 text-muted">Recent Audits</h6>
+                            <a href="{{ url_for('main.export_snapshot') }}" class="btn btn-sm btn-link text-dark p-0"><i class="fas fa-file-csv"></i></a>
+                        </div>
+                        <div id="auditHistory">
+                            {% if recent_audits %}
+                                {% for r in recent_audits %}
+                                <div class="recent-audit-item shadow-sm">
+                                    <div class="fw-bold">{{ r.description }}</div>
+                                    <div class="d-flex justify-content-between small text-muted">
+                                        <span>{{ r.manufacturer }}</span>
+                                        <span class="badge bg-success">{{ r.stock_level }} units</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted small mt-4">Start scanning to see history</div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -175,27 +185,12 @@
 </div>
 {% endif %}
 
-<div class="modal fade" id="keypadModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg" style="border-radius: 20px;"><div class="modal-body text-center p-4">
-    <h5 id="keypadTitle" class="fw-bold mb-3">Enter PIN</h5>
-    <div id="pinDots" class="pin-dots mb-4"></div>
-    <div class="keypad-grid">
-        <button class="key-btn" onclick="pressKey('1')">1</button><button class="key-btn" onclick="pressKey('2')">2</button><button class="key-btn" onclick="pressKey('3')">3</button>
-        <button class="key-btn" onclick="pressKey('4')">4</button><button class="key-btn" onclick="pressKey('5')">5</button><button class="key-btn" onclick="pressKey('6')">6</button>
-        <button class="key-btn" onclick="pressKey('7')">7</button><button class="key-btn" onclick="pressKey('8')">8</button><button class="key-btn" onclick="pressKey('9')">9</button>
-        <button class="key-btn text-danger" onclick="pressKey('C')"><i class="fas fa-times"></i></button><button class="key-btn" onclick="pressKey('0')">0</button><button class="key-btn text-success" onclick="pressKey('OK')"><i class="fas fa-check"></i></button>
-    </div>
-    <button class="btn btn-link text-muted mt-3" data-bs-dismiss="modal">Cancel</button>
-</div></div></div></div>
-
-<form id="pinForm" action="{{ url_for('main.verify_pin') }}" method="POST" style="display: none;"><input type="hidden" name="user_id" id="pin_user_id"><input type="hidden" name="pin" id="pin_value"></form>
 <div style="display: none;"><form action="{{ url_for('main.scan') }}" method="POST"><input type="text" name="barcode" id="barcode" autofocus autocomplete="off"></form></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let currentInput = "";
-    let keypadMode = "";
-    let modal = new bootstrap.Modal(document.getElementById('keypadModal'));
-    
+    let currentField = "auditNumPacks"; 
+
     {% if user %}
     let logoutTimeout = setTimeout(doLogout, 15000);
     function resetLogoutTimer() { clearTimeout(logoutTimeout); logoutTimeout = setTimeout(doLogout, 15000); }
@@ -209,96 +204,80 @@
     document.addEventListener('keypress', resetLogoutTimer);
     {% endif %}
 
-    const searchInput = document.getElementById('staffSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('.staff-row').forEach(row => {
-                const name = row.querySelector('.staff-name').textContent.toLowerCase();
-                row.style.display = name.includes(term) ? "" : "none";
-            });
+    function focusScan() {
+        const scannerInput = document.createElement('input');
+        scannerInput.style.opacity = "0";
+        scannerInput.style.position = "absolute";
+        document.body.appendChild(scannerInput);
+        scannerInput.focus();
+        scannerInput.addEventListener('change', (e) => {
+            const code = e.target.value;
+            document.getElementById('auditBarcode').value = code;
+            lookupProduct(code);
+            document.body.removeChild(scannerInput);
         });
     }
 
-    const auditSearch = document.getElementById('auditSearch');
-    if (auditSearch) {
-        auditSearch.addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('.audit-row').forEach(row => {
-                const name = row.querySelector('.audit-name').textContent.toLowerCase();
-                const barcode = row.getAttribute('data-barcode').toLowerCase();
-                row.style.display = (name.includes(term) || barcode === term) ? "" : "none";
-                if (barcode === term) selectAuditItem(barcode, row.querySelector('.audit-name').textContent);
-            });
-        });
+    function generatePLU() {
+        const plu = "PLU-" + Math.floor(1000 + Math.random() * 9000);
+        document.getElementById('auditBarcode').value = plu;
+        document.getElementById('auditMfg').value = "";
+        document.getElementById('auditDesc').value = "Non-Barcoded Item";
+        document.getElementById('auditSize').value = "";
+        resetCounts();
     }
 
-    function selectAuditItem(barcode, name) {
-        document.getElementById('auditForm').style.display = 'block';
-        document.getElementById('auditTargetName').innerText = name;
-        document.getElementById('auditTargetBarcode').value = barcode;
-        const countInput = document.getElementById('auditCountInput');
-        countInput.value = "";
-        document.getElementById('auditCalcResult').innerText = "";
-        countInput.focus();
+    async function lookupProduct(code) {
+        const response = await fetch(`/admin/get-product/${code}`);
+        const data = await response.json();
+        if (data.found) {
+            document.getElementById('auditMfg').value = data.mfg;
+            document.getElementById('auditDesc').value = data.desc;
+            document.getElementById('auditSize').value = data.size;
+            document.getElementById('auditPackQty').value = "1";
+            document.getElementById('auditNumPacks').value = "";
+            currentField = "auditNumPacks";
+            calcTotal();
+        } else {
+            document.getElementById('auditDesc').value = "NEW ITEM";
+            resetCounts();
+        }
     }
 
-    // Pack Math Logic
-    const countField = document.getElementById('auditCountInput');
-    if (countField) {
-        countField.addEventListener('input', function(e) {
-            const val = e.target.value;
-            if (val.includes('*')) {
-                const parts = val.split('*');
-                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                    const total = parseInt(parts[0]) * parseInt(parts[1]);
-                    document.getElementById('auditCalcResult').innerText = "Total: " + total + " units";
-                }
-            } else {
-                document.getElementById('auditCalcResult').innerText = "";
-            }
-        });
+    function resetCounts() {
+        document.getElementById('auditPackQty').value = "1";
+        document.getElementById('auditNumPacks').value = "";
+        document.getElementById('auditDisplayTotal').innerText = "0";
+        currentField = "auditNumPacks";
+    }
+
+    function numPress(val) {
+        if (val === 'C') { resetCounts(); return; }
+        if (val === '*') {
+            currentField = "auditPackQty";
+            document.getElementById('auditPackQty').value = "";
+            return;
+        }
+        const field = document.getElementById(currentField);
+        field.value += val;
+        calcTotal();
+    }
+
+    function calcTotal() {
+        const packSize = parseInt(document.getElementById('auditPackQty').value) || 1;
+        const numPacks = parseInt(document.getElementById('auditNumPacks').value) || 0;
+        const total = packSize * numPacks;
+        document.getElementById('auditDisplayTotal').innerText = total;
+        document.getElementById('auditFinalCount').value = total;
     }
 
     document.getElementById('auditForm')?.addEventListener('submit', function(e) {
-        const input = document.getElementById('auditCountInput');
-        if (input.value.includes('*')) {
-            const parts = input.value.split('*');
-            input.value = parseInt(parts[0]) * parseInt(parts[1]);
-        }
+        const total = document.getElementById('auditFinalCount').value;
+        if (total === "0" && !confirm("Save with 0 stock?")) e.preventDefault();
     });
 
-    function openKeypad(mode, userId = null) {
-        keypadMode = mode;
-        currentInput = "";
-        document.getElementById('pin_user_id').value = userId || "{{ user.user_id if user else '' }}";
-        document.getElementById('pinDots').innerText = "";
-        document.getElementById('keypadTitle').innerText = (mode === 'set') ? "Create 4-Digit PIN" : "Enter PIN";
-        modal.show();
-    }
-
-    function pressKey(key) {
-        if (key === 'C') currentInput = "";
-        else if (key === 'OK') { submitPin(); return; }
-        else if (currentInput.length < 4) currentInput += key;
-        document.getElementById('pinDots').innerText = "•".repeat(currentInput.length);
-        if (currentInput.length === 4 && keypadMode === 'login') submitPin();
-    }
-
-    function submitPin() {
-        if (currentInput.length !== 4) return;
-        const form = document.getElementById('pinForm');
-        document.getElementById('pin_value').value = currentInput;
-        if (keypadMode === 'login') form.action = "{{ url_for('main.verify_pin') }}";
-        else if (keypadMode === 'set') { window.location.href = "{{ url_for('main.update_pin', action='set') }}?pin=" + currentInput; return; }
-        else if (keypadMode === 'remove') form.action = "{{ url_for('main.update_pin', action='remove') }}";
-        form.submit();
-    }
-
-    {% if request.args.get('needs_pin') %} openKeypad('login', "{{ request.args.get('needs_pin') }}"); {% endif %}
-
     document.addEventListener("click", (e) => { 
-        if (!['INPUT', 'A', 'BUTTON', 'I', 'UL', 'LI'].includes(e.target.tagName)) {
+        if (!['INPUT', 'BUTTON', 'I'].includes(e.target.tagName)) {
             const bc = document.getElementById("barcode");
             if (bc) bc.focus();
         }
