@@ -1,4 +1,5 @@
 import csv
+import requests
 from io import StringIO
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, make_response, jsonify
 from models import db, Users, Products, Transactions
@@ -82,15 +83,27 @@ def scan():
 
 @main.route('/admin/get-product/<barcode>')
 def get_product(barcode):
-    p = Products.query.get(barcode.strip())
+    barcode = barcode.strip()
+    p = Products.query.get(barcode)
     if p:
         return jsonify({
-            "found": True, 
-            "mfg": p.manufacturer, 
-            "desc": p.description, 
-            "size": p.size,
-            "soh": p.stock_level
+            "found": True, "mfg": p.manufacturer, "desc": p.description, 
+            "size": p.size, "price": str(p.price), "cat": p.category, "soh": p.stock_level
         })
+    
+    try:
+        api_url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
+        response = requests.get(api_url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == 1:
+                prod = data.get("product", {})
+                return jsonify({
+                    "found": True, "mfg": prod.get("brands", ""), 
+                    "desc": prod.get("product_name", ""), 
+                    "size": prod.get("quantity", ""), "soh": 0
+                })
+    except: pass
     return jsonify({"found": False})
 
 @main.route('/admin/audit-submit', methods=['POST'])
@@ -109,54 +122,49 @@ def audit_submit():
     if not product:
         product = Products(upc_code=barcode, manufacturer=mfg, description=desc, 
                            size=size, price=Decimal('2.50'), stock_level=count, 
-                           is_quick_item=True, category='Snacks', 
-                           last_audited=datetime.utcnow())
+                           is_quick_item=True, category='Snacks', last_audited=datetime.utcnow())
         db.session.add(product)
     else:
-        product.manufacturer = mfg
-        product.description = desc
-        product.size = size
+        product.manufacturer, product.description, product.size = mfg, desc, size
         product.stock_level = count
         product.last_audited = datetime.utcnow()
     
     db.session.commit()
     return redirect(url_for('main.index'))
 
-@main.route('/admin/export-snapshot')
-def export_snapshot():
+@main.route('/admin/products')
+def manage_products():
     if 'user_id' not in session: return redirect(url_for('main.index'))
     admin = Users.query.get(int(session['user_id']))
     if not admin or not admin.is_admin: return redirect(url_for('main.index'))
+    return render_template('manage_products.html', products=Products.query.order_by(Products.description).all())
 
-    si = StringIO()
-    cw = csv.writer(si)
-    cw.writerow(["--- PRODUCTS ---"])
-    cw.writerow(["UPC_Code", "Manufacturer", "Description", "Size", "Category", "Price", "Stock_Level"])
-    for p in Products.query.all():
-        cw.writerow([p.upc_code, p.manufacturer, p.description, p.size, p.category, p.price, p.stock_level])
-    cw.writerow([])
-    cw.writerow(["--- USERS ---"])
-    cw.writerow(["Card_ID", "First_Name", "Last_Name", "Balance"])
-    for u in Users.query.all():
-        cw.writerow([u.card_id, u.first_name, u.last_name, u.balance])
-
-    output = make_response(si.getvalue())
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
-    output.headers["Content-Disposition"] = f"attachment; filename=snackshack_snapshot_{timestamp}.csv"
-    output.headers["Content-type"] = "text/csv"
-    return output
-
-@main.route('/admin/reset-pin/<int:target_id>')
-def admin_reset_pin(target_id):
+@main.route('/admin/product/save', methods=['POST'])
+def save_product_manual():
     if 'user_id' not in session: return redirect(url_for('main.index'))
-    admin = Users.query.get(int(session['user_id']))
-    if admin and admin.is_admin:
-        target_user = Users.query.get(target_id)
-        if target_user:
-            target_user.pin = None
-            db.session.commit()
-            flash(f"PIN for {target_user.first_name} cleared.", "success")
-    return redirect(url_for('main.index'))
+    upc = request.form.get('upc_code').strip()
+    product = Products.query.get(upc)
+    if not product:
+        product = Products(upc_code=upc)
+        db.session.add(product)
+    product.manufacturer = request.form.get('manufacturer')
+    product.description = request.form.get('description')
+    product.size = request.form.get('size')
+    product.price = Decimal(request.form.get('price', '0.00'))
+    product.category = request.form.get('category')
+    product.stock_level = int(request.form.get('stock_level', 0))
+    product.is_quick_item = 'is_quick_item' in request.form
+    db.session.commit()
+    return redirect(url_for('main.manage_products'))
+
+@main.route('/admin/product/delete/<upc>')
+def delete_product(upc):
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    product = Products.query.get(upc)
+    if product:
+        db.session.delete(product)
+        db.session.commit()
+    return redirect(url_for('main.manage_products'))
 
 @main.route('/undo')
 def undo():
@@ -164,13 +172,11 @@ def undo():
         uid = int(session['user_id'])
         lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
         if lt:
-            u = Users.query.get(uid)
-            p = Products.query.get(lt.upc_code)
-            u.balance = Decimal(str(u.balance)) + Decimal(str(lt.amount))
+            u, p = Users.query.get(uid), Products.query.get(lt.upc_code)
+            u.balance += Decimal(str(lt.amount))
             if p: p.stock_level += 1
             db.session.delete(lt)
             db.session.commit()
-            flash("Purchase Undone.", "info")
     return redirect(url_for('main.index'))
 
 @main.route('/logout')
