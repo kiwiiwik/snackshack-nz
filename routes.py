@@ -47,11 +47,13 @@ def index():
                                           .order_by(Products.last_audited.desc())\
                                           .limit(5).all()
 
+    # Organized Category Order
     cat_order = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
     quick_items = Products.query.filter_by(is_quick_item=True).all()
     
     grouped_products = {cat: [] for cat in cat_order}
     for p in quick_items:
+        # Fallback to Snacks if category is NULL
         cat = p.category if p.category in grouped_products else "Snacks"
         grouped_products[cat].append(p)
     

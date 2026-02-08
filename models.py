@@ -25,7 +25,8 @@ class Products(db.Model):
     stock_level = db.Column('Stock_Level', db.Integer, nullable=False, default=0)
     is_quick_item = db.Column('Is_Quick_Item', db.Boolean, default=False)
     image_url = db.Column('Image_URL', db.String(255))
-    last_audited = db.Column('Last_Audited', db.DateTime) # New Column
+    last_audited = db.Column('Last_Audited', db.DateTime)
+    category = db.Column('Category', db.String(50))
 
 class Transactions(db.Model):
     __tablename__ = 'Transactions'

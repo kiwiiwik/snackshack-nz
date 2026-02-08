@@ -118,13 +118,11 @@
                     <div class="col-md-3">
                         <button onclick="focusScan()" class="audit-btn-large bg-danger mb-2 shadow-sm"><i class="fas fa-barcode mb-1"></i> Scan Barcode</button>
                         <button onclick="generatePLU()" class="audit-btn-large bg-dark mb-4 shadow-sm"><i class="fas fa-plus-circle mb-1"></i> No Barcode?</button>
-                        <div class="bg-light p-3 rounded shadow-sm">
-                            <div class="num-pad">
-                                <button class="num-btn" onclick="numPress('1')">1</button><button class="num-btn" onclick="numPress('2')">2</button><button class="num-btn" onclick="numPress('3')">3</button>
-                                <button class="num-btn" onclick="numPress('4')">4</button><button class="num-btn" onclick="numPress('5')">5</button><button class="num-btn" onclick="numPress('6')">6</button>
-                                <button class="num-btn" onclick="numPress('7')">7</button><button class="num-btn" onclick="numPress('8')">8</button><button class="num-btn" onclick="numPress('9')">9</button>
-                                <button class="num-btn" onclick="numPress('0')">0</button><button class="num-btn text-primary" onclick="numPress('*')">x</button><button class="num-btn text-danger" onclick="numPress('C')">C</button>
-                            </div>
+                        <div class="num-pad bg-light p-3 rounded">
+                            <button class="num-btn" onclick="numPress('1')">1</button><button class="num-btn" onclick="numPress('2')">2</button><button class="num-btn" onclick="numPress('3')">3</button>
+                            <button class="num-btn" onclick="numPress('4')">4</button><button class="num-btn" onclick="numPress('5')">5</button><button class="num-btn" onclick="numPress('6')">6</button>
+                            <button class="num-btn" onclick="numPress('7')">7</button><button class="num-btn" onclick="numPress('8')">8</button><button class="num-btn" onclick="numPress('9')">9</button>
+                            <button class="num-btn" onclick="numPress('0')">0</button><button class="num-btn text-primary" onclick="numPress('*')">x</button><button class="num-btn text-danger" onclick="numPress('C')">C</button>
                         </div>
                     </div>
 
@@ -137,18 +135,11 @@
                                     <div class="col-6">
                                         <div class="field-label">Group Category</div>
                                         <select name="category" id="auditCat" class="form-select">
-                                            <option value="Drinks">Drinks</option>
-                                            <option value="Snacks">Snacks</option>
-                                            <option value="Candy">Candy</option>
-                                            <option value="Frozen">Frozen</option>
-                                            <option value="Coffee Pods">Coffee Pods</option>
-                                            <option value="Sweepstake Tickets">Sweepstake Tickets</option>
+                                            <option value="Drinks">Drinks</option><option value="Snacks">Snacks</option><option value="Candy">Candy</option>
+                                            <option value="Frozen">Frozen</option><option value="Coffee Pods">Coffee Pods</option><option value="Sweepstake Tickets">Sweepstake Tickets</option>
                                         </select>
                                     </div>
-                                    <div class="col-6">
-                                        <div class="field-label">Price ($)</div>
-                                        <input type="text" name="price" id="auditPrice" class="form-control fw-bold text-success" value="2.50">
-                                    </div>
+                                    <div class="col-6"><div class="field-label">Price ($)</div><input type="text" name="price" id="auditPrice" class="form-control fw-bold text-success" value="2.50"></div>
                                 </div>
 
                                 <div class="row g-2 mb-3">
@@ -168,9 +159,7 @@
                                     <h1 class="display-4 fw-bold text-primary m-0" id="auditDisplayTotal">0</h1>
                                 </div>
 
-                                <button type="submit" class="audit-btn-large bg-success shadow py-4">
-                                    <i class="fas fa-save mb-2"></i> SAVE POINT OF TRUTH
-                                </button>
+                                <button type="submit" class="audit-btn-large bg-success shadow py-4"><i class="fas fa-save mb-2"></i> SAVE POINT OF TRUTH</button>
                             </div>
                         </form>
                     </div>
@@ -189,8 +178,6 @@
     </div>
 </div>
 {% endif %}
-
-<div style="display: none;"><form action="{{ url_for('main.scan') }}" method="POST"><input type="text" name="barcode" id="barcode" autofocus autocomplete="off"></form></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
