@@ -25,7 +25,7 @@
             <td><code>{{ p.upc_code }}</code></td><td>{{ p.manufacturer }}</td><td class="fw-bold">{{ p.description }}</td><td class="text-success fw-bold">${{ "%.2f"|format(p.price) }}</td>
             <td><span class="badge bg-light text-dark border">{{ p.stock_level }}</span></td>
             <td class="text-end px-4">
-                <button class="btn btn-sm btn-outline-primary shadow-sm" onclick="editProduct({{ p.to_dict() | tojson }})"><i class="fas fa-edit"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm"  data-bs-toggle="modal" data-bs-target="#editModal" onclick="editProduct({{ p.to_dict() | tojson }})"><i class="fas fa-edit"></i></button>
                 <a href="{{ url_for('main.delete_product', upc=p.upc_code) }}" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
             </td>
         </tr>{% endfor %}</tbody></table></div></div>
