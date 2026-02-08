@@ -191,9 +191,31 @@
     let currentInput = "";
     let keypadMode = "";
     let modal = new bootstrap.Modal(document.getElementById('keypadModal'));
+    
+    // SMART LOGOUT: Pauses if Admin Tools are open
     {% if user %}
-    let timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 15000);
-    document.addEventListener('mousedown', () => { clearTimeout(timeout); timeout = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 15000); });
+    let logoutTimeout = setTimeout(doLogout, 15000);
+    
+    function resetLogoutTimer() {
+        clearTimeout(logoutTimeout);
+        logoutTimeout = setTimeout(doLogout, 15000);
+    }
+
+    function doLogout() {
+        const adminModalEl = document.getElementById('adminModal');
+        const isAdminOpen = adminModalEl && adminModalEl.classList.contains('show');
+        
+        // Only log out if Admin Tools are NOT open
+        if (!isAdminOpen) {
+            window.location.href = "{{ url_for('main.logout') }}";
+        } else {
+            // Keep resetting while admin is working
+            resetLogoutTimer();
+        }
+    }
+
+    document.addEventListener('mousedown', resetLogoutTimer);
+    document.addEventListener('keypress', resetLogoutTimer);
     {% endif %}
 
     const searchInput = document.getElementById('staffSearch');
