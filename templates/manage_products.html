@@ -14,17 +14,23 @@
 
 <nav class="navbar navbar-dark bg-dark mb-4">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/"><i class="fas fa-arrow-left me-2"></i> Back to Kiosk</a>
+        <a class="navbar-brand fw-bold" href="/"><i class="fas fa-arrow-left me-2"></i> Kiosk Switchboard</a>
         <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#editModal" onclick="clearForm()"><i class="fas fa-plus me-1"></i> Add New Product</button>
     </div>
 </nav>
 
 <div class="container-fluid px-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm">{{ msg }}</div>{% endfor %}{% endif %}
+    {% endwith %}
     <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>UPC / PLU</th><th>Category</th><th>Brand</th><th>Description</th><th>Size</th><th>Price</th><th>Stock</th><th>Kiosk?</th><th class="text-end">Actions</th></tr></thead>
         <tbody>{% for p in products %}<tr>
             <td><code>{{ p.upc_code }}</code></td><td><span class="badge bg-secondary">{{ p.category }}</span></td><td>{{ p.manufacturer }}</td><td class="fw-bold">{{ p.description }}</td><td>{{ p.size }}</td><td class="text-success fw-bold">${{ "%.2f"|format(p.price) }}</td>
             <td><span class="badge {{ 'bg-danger' if p.stock_level < 5 else 'bg-light text-dark border' }}">{{ p.stock_level }}</span></td><td>{% if p.is_quick_item %}<i class="fas fa-check-circle text-success"></i>{% endif %}</td>
-            <td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="editProduct({{ p | tojson }})"><i class="fas fa-edit"></i></button><a href="{{ url_for('main.delete_product', upc=p.upc_code) }}" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a></td>
+            <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary" onclick="editProduct({{ p.to_dict() | tojson }})"><i class="fas fa-edit"></i></button>
+                <a href="{{ url_for('main.delete_product', upc=p.upc_code) }}" class="btn btn-sm btn-outline-danger ms-1" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
+            </td>
         </tr>{% endfor %}</tbody></table></div></div>
 </div>
 
@@ -32,7 +38,15 @@
     <div class="modal-header"><h5 class="modal-title fw-bold" id="modalTitle">Edit Product</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
         <div class="mb-3"><label class="form-label small fw-bold">UPC / PLU CODE</label><input type="text" name="upc_code" id="formUPC" class="form-control" required></div>
-        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold">CATEGORY</label><select name="category" id="formCat" class="form-select"><option value="Drinks">Drinks</option><option value="Snacks">Snacks</option><option value="Candy">Candy</option><option value="Frozen">Frozen</option><option value="Coffee Pods">Coffee Pods</option><option value="Sweepstake Tickets">Sweepstake Tickets</option></select></div><div class="col-6"><label class="form-label small fw-bold">PRICE ($)</label><input type="number" step="0.01" name="price" id="formPrice" class="form-control"></div></div>
+        <div class="row g-2 mb-3">
+            <div class="col-6"><label class="form-label small fw-bold">CATEGORY</label>
+                <select name="category" id="formCat" class="form-select">
+                    <option value="Drinks">Drinks</option><option value="Snacks">Snacks</option><option value="Candy">Candy</option>
+                    <option value="Frozen">Frozen</option><option value="Coffee Pods">Coffee Pods</option><option value="Sweepstake Tickets">Sweepstake Tickets</option>
+                </select>
+            </div>
+            <div class="col-6"><label class="form-label small fw-bold">PRICE ($)</label><input type="number" step="0.01" name="price" id="formPrice" class="form-control"></div>
+        </div>
         <div class="mb-3"><label class="form-label small fw-bold">BRAND</label><input type="text" name="manufacturer" id="formMfg" class="form-control"></div>
         <div class="mb-3"><label class="form-label small fw-bold">DESCRIPTION</label><input type="text" name="description" id="formDesc" class="form-control" required></div>
         <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold">SIZE</label><input type="text" name="size" id="formSize" class="form-control"></div><div class="col-6"><label class="form-label small fw-bold">STOCK</label><input type="number" name="stock_level" id="formStock" class="form-control"></div></div>
