@@ -23,6 +23,8 @@ class Products(db.Model):
     size = db.Column('Size', db.String(50))
     price = db.Column('Price', db.Numeric(10, 2))
     stock_level = db.Column('Stock_Level', db.Integer, nullable=False, default=0)
+    is_quick_item = db.Column('Is_Quick_Item', db.Boolean, default=False) # New
+    image_url = db.Column('Image_URL', db.String(255)) # New
 
 class Transactions(db.Model):
     __tablename__ = 'Transactions'
@@ -31,10 +33,3 @@ class Transactions(db.Model):
     upc_code = db.Column('UPC_Code', db.String(50), db.ForeignKey('Products.UPC_Code'))
     amount = db.Column('Amount', db.Numeric(10, 2))
     transaction_date = db.Column('Transaction_Date', db.DateTime, default=datetime.utcnow)
-
-class Quick_Items(db.Model):
-    __tablename__ = 'Quick_Items'
-    item_id = db.Column('Item_ID', db.Integer, primary_key=True)
-    label = db.Column('Label', db.String(50))
-    barcode_val = db.Column('Barcode_Value', db.String(50)) 
-    image_url = db.Column('Image_URL', db.String(255))

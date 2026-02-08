@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from models import db, Users, Products, Transactions, Quick_Items
+from models import db, Users, Products, Transactions
 from datetime import datetime
 from decimal import Decimal
 
@@ -34,8 +34,7 @@ def process_barcode(barcode):
 def index():
     current_user = None
     all_staff = None
-    # RESTORED: This line catches the purchase result from the URL
-    just_bought = request.args.get('bought') 
+    just_bought = request.args.get('bought')
     
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
@@ -43,9 +42,8 @@ def index():
             all_staff = Users.query.order_by(Users.first_name).all()
 
     vips = Users.query.order_by(Users.last_seen.desc()).limit(30).all()
-    quick_data = db.session.query(Quick_Items, Products).join(
-        Products, Quick_Items.barcode_val == Products.upc_code
-    ).all()
+    # SIMPLIFIED: Just filter Products directly
+    quick_data = Products.query.filter_by(is_quick_item=True).all()
     
     return render_template('index.html', user=current_user, users=vips, quick_items=quick_data, staff=all_staff, just_bought=just_bought)
 

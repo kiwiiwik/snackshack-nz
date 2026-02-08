@@ -70,14 +70,14 @@
         </div>
     {% else %}
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-4">
-            {% for item, p in quick_items %}
+            {% for p in quick_items %}
             <div class="col">
-                <a href="{{ url_for('main.manual_add', barcode=item.barcode_val) }}" class="text-decoration-none text-dark">
+                <a href="{{ url_for('main.manual_add', barcode=p.upc_code) }}" class="text-decoration-none text-dark">
                     <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile">
                         <span class="badge soh-badge {{ 'bg-danger' if p.stock_level < 5 else 'bg-light text-dark border' }}">
                             {{ p.stock_level }} left
                         </span>
-                        <img src="{{ url_for('static', filename='images/' + (item.image_url or 'placeholder.png')) }}" 
+                        <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" 
                              class="product-img mb-2" 
                              onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/placeholder.png') }}';">
                         <div class="meta-text">{{ p.manufacturer }}</div>
