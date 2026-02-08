@@ -28,17 +28,16 @@ class Products(db.Model):
     last_audited = db.Column('Last_Audited', db.DateTime)
     category = db.Column('Category', db.String(50))
 
-    # FIXED: Method to convert object to a serializable dictionary
     def to_dict(self):
         return {
             'upc_code': self.upc_code,
-            'manufacturer': self.manufacturer,
-            'description': self.description,
-            'size': self.size,
+            'manufacturer': self.manufacturer or "",
+            'description': self.description or "",
+            'size': self.size or "",
             'price': float(self.price) if self.price else 0.0,
-            'stock_level': self.stock_level,
+            'stock_level': self.stock_level or 0,
             'is_quick_item': self.is_quick_item,
-            'category': self.category
+            'category': self.category or "Snacks"
         }
 
 class Transactions(db.Model):
