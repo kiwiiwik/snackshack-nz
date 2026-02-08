@@ -23,8 +23,8 @@ class Products(db.Model):
     size = db.Column('Size', db.String(50))
     price = db.Column('Price', db.Numeric(10, 2))
     stock_level = db.Column('Stock_Level', db.Integer, nullable=False, default=0)
-    is_quick_item = db.Column('Is_Quick_Item', db.Boolean, default=False) # New
-    image_url = db.Column('Image_URL', db.String(255)) # New
+    is_quick_item = db.Column('Is_Quick_Item', db.Boolean, default=False)
+    image_url = db.Column('Image_URL', db.String(255))
 
 class Transactions(db.Model):
     __tablename__ = 'Transactions'
