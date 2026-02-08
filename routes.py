@@ -87,7 +87,14 @@ def audit_submit():
     if not admin or not admin.is_admin: return redirect(url_for('main.index'))
 
     barcode = request.form.get('barcode').strip()
-    new_count = int(request.form.get('new_count', 0))
+    raw_count = request.form.get('new_count', '0')
+    
+    # Safety: Default to 0 if input is empty to prevent crash
+    try:
+        new_count = int(raw_count) if raw_count else 0
+    except ValueError:
+        new_count = 0
+
     product = Products.query.get(barcode)
     if product:
         product.stock_level = new_count
@@ -102,7 +109,9 @@ def update_stock():
     if not admin or not admin.is_admin: return redirect(url_for('main.index'))
 
     barcode = request.form.get('barcode').strip()
-    qty = int(request.form.get('quantity', 0))
+    qty_str = request.form.get('quantity', '0')
+    qty = int(qty_str) if qty_str else 0
+    
     product = Products.query.get(barcode)
     if product:
         product.stock_level += qty

@@ -160,7 +160,11 @@
                         <form action="{{ url_for('main.audit_submit') }}" method="POST" id="auditForm" class="p-3 bg-light rounded border mt-3" style="display:none;">
                             <h6 id="auditTargetName" class="fw-bold text-primary"></h6>
                             <input type="hidden" name="barcode" id="auditTargetBarcode">
-                            <div class="mb-3"><label class="form-label small fw-bold">Actual Count</label><input type="text" name="new_count" class="form-control form-control-lg" id="auditCountInput"></div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Actual Count</label>
+                                <input type="text" name="new_count" class="form-control form-control-lg" id="auditCountInput" placeholder="e.g. 12 or 2*24">
+                                <div id="auditCalcResult" class="text-success small mt-1 fw-bold"></div>
+                            </div>
                             <button type="submit" class="btn btn-success w-100 py-2">SAVE POINT OF TRUTH</button>
                         </form>
                     </div>
@@ -192,28 +196,15 @@
     let keypadMode = "";
     let modal = new bootstrap.Modal(document.getElementById('keypadModal'));
     
-    // SMART LOGOUT: Pauses if Admin Tools are open
     {% if user %}
     let logoutTimeout = setTimeout(doLogout, 15000);
-    
-    function resetLogoutTimer() {
-        clearTimeout(logoutTimeout);
-        logoutTimeout = setTimeout(doLogout, 15000);
-    }
-
+    function resetLogoutTimer() { clearTimeout(logoutTimeout); logoutTimeout = setTimeout(doLogout, 15000); }
     function doLogout() {
         const adminModalEl = document.getElementById('adminModal');
         const isAdminOpen = adminModalEl && adminModalEl.classList.contains('show');
-        
-        // Only log out if Admin Tools are NOT open
-        if (!isAdminOpen) {
-            window.location.href = "{{ url_for('main.logout') }}";
-        } else {
-            // Keep resetting while admin is working
-            resetLogoutTimer();
-        }
+        if (!isAdminOpen) window.location.href = "{{ url_for('main.logout') }}";
+        else resetLogoutTimer();
     }
-
     document.addEventListener('mousedown', resetLogoutTimer);
     document.addEventListener('keypress', resetLogoutTimer);
     {% endif %}
@@ -246,8 +237,27 @@
         document.getElementById('auditForm').style.display = 'block';
         document.getElementById('auditTargetName').innerText = name;
         document.getElementById('auditTargetBarcode').value = barcode;
-        document.getElementById('auditCountInput').value = "";
-        document.getElementById('auditCountInput').focus();
+        const countInput = document.getElementById('auditCountInput');
+        countInput.value = "";
+        document.getElementById('auditCalcResult').innerText = "";
+        countInput.focus();
+    }
+
+    // Pack Math Logic
+    const countField = document.getElementById('auditCountInput');
+    if (countField) {
+        countField.addEventListener('input', function(e) {
+            const val = e.target.value;
+            if (val.includes('*')) {
+                const parts = val.split('*');
+                if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                    const total = parseInt(parts[0]) * parseInt(parts[1]);
+                    document.getElementById('auditCalcResult').innerText = "Total: " + total + " units";
+                }
+            } else {
+                document.getElementById('auditCalcResult').innerText = "";
+            }
+        });
     }
 
     document.getElementById('auditForm')?.addEventListener('submit', function(e) {
