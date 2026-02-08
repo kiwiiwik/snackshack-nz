@@ -44,7 +44,11 @@
 
 <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
+        {% if messages %}
+            {% for cat, msg in messages %}
+                <div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>
+            {% endfor %}
+        {% endif %}
     {% endwith %}
 
     {% if not user %}
