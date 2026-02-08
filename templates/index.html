@@ -116,7 +116,7 @@
             <div class="modal-body p-4">
                 <div class="row g-4">
                     <div class="col-md-3">
-                        <button onclick="focusScan()" class="audit-btn-large bg-danger mb-2 shadow-sm"><i class="fas fa-barcode mb-1"></i> Scan Barcode</button>
+                        <button onclick="focusScanField()" class="audit-btn-large bg-danger mb-2 shadow-sm"><i class="fas fa-barcode mb-1"></i> Scan Barcode</button>
                         <button onclick="generatePLU()" class="audit-btn-large bg-dark mb-4 shadow-sm"><i class="fas fa-plus-circle mb-1"></i> No Barcode?</button>
                         <div class="num-pad bg-light p-3 rounded">
                             <button class="num-btn" onclick="numPress('1')">1</button><button class="num-btn" onclick="numPress('2')">2</button><button class="num-btn" onclick="numPress('3')">3</button>
@@ -127,21 +127,13 @@
                     </div>
 
                     <div class="col-md-6">
-                        <form action="{{ url_for('main.audit_submit') }}" method="POST" id="auditForm">
+                        <form action="{{ url_for('main.audit_submit') }}" method="POST" id="auditForm" onsubmit="return validateAuditForm()">
                             <div class="card border-0 bg-white shadow-sm p-4 h-100">
-                                <div class="mb-3"><div class="field-label">UPC / PLU Code</div><input type="text" name="barcode" id="auditBarcode" class="form-control form-control-lg bg-light fw-bold" readonly></div>
-                                
-                                <div class="row g-2 mb-3">
-                                    <div class="col-6">
-                                        <div class="field-label">Group Category</div>
-                                        <select name="category" id="auditCat" class="form-select">
-                                            <option value="Drinks">Drinks</option><option value="Snacks">Snacks</option><option value="Candy">Candy</option>
-                                            <option value="Frozen">Frozen</option><option value="Coffee Pods">Coffee Pods</option><option value="Sweepstake Tickets">Sweepstake Tickets</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-6"><div class="field-label">Price ($)</div><input type="text" name="price" id="auditPrice" class="form-control fw-bold text-success" value="2.50"></div>
+                                <div class="mb-3">
+                                    <div class="field-label">UPC / PLU Code (Scan Here)</div>
+                                    <input type="text" name="barcode" id="auditBarcode" class="form-control form-control-lg bg-white fw-bold" placeholder="Tap 'Scan' or click here to scan" onkeydown="handleBarcodeKey(event)">
                                 </div>
-
+                                
                                 <div class="row g-2 mb-3">
                                     <div class="col-6"><div class="field-label">Brand</div><input type="text" name="manufacturer" id="auditMfg" class="form-control"></div>
                                     <div class="col-6"><div class="field-label">Size</div><input type="text" name="size" id="auditSize" class="form-control"></div>
@@ -149,17 +141,25 @@
                                 <div class="mb-4"><div class="field-label">Item Description</div><input type="text" name="description" id="auditDesc" class="form-control"></div>
 
                                 <div class="row g-3 mb-4">
-                                    <div class="col-6"><div class="field-label text-center">Qty per Pack</div><input type="text" id="auditPackQty" class="form-control form-control-lg text-center fw-bold" value="1" onclick="setFocus('auditPackQty')"></div>
-                                    <div class="col-6"><div class="field-label text-center">Num Packs</div><input type="text" id="auditNumPacks" class="form-control form-control-lg text-center fw-bold" placeholder="0" onclick="setFocus('auditNumPacks')"></div>
+                                    <div class="col-6">
+                                        <div class="field-label text-center">Qty per Pack</div>
+                                        <input type="text" id="auditPackQty" class="form-control form-control-lg text-center fw-bold" value="1" onclick="setFocus('auditPackQty')">
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="field-label text-center">Num Packs</div>
+                                        <input type="text" id="auditNumPacks" class="form-control form-control-lg text-center fw-bold" placeholder="0" onclick="setFocus('auditNumPacks')">
+                                    </div>
                                 </div>
 
                                 <div class="text-center p-3 bg-primary bg-opacity-10 rounded mb-4">
-                                    <div class="field-label text-primary">Final Count</div>
+                                    <div class="field-label text-primary">Final Count to Record</div>
                                     <input type="hidden" name="final_count" id="auditFinalCount" value="0">
                                     <h1 class="display-4 fw-bold text-primary m-0" id="auditDisplayTotal">0</h1>
                                 </div>
 
-                                <button type="submit" class="audit-btn-large bg-success shadow py-4"><i class="fas fa-save mb-2"></i> SAVE POINT OF TRUTH</button>
+                                <button type="submit" class="audit-btn-large bg-success shadow py-4">
+                                    <i class="fas fa-save mb-2"></i> SAVE
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -197,19 +197,18 @@
     {% endif %}
 
     function setFocus(fieldId) { currentField = fieldId; }
+    function focusScanField() { 
+        const bc = document.getElementById('auditBarcode');
+        bc.value = "";
+        bc.focus(); 
+    }
 
-    function focusScan() {
-        const scannerInput = document.createElement('input');
-        scannerInput.style.opacity = "0";
-        scannerInput.style.position = "absolute";
-        document.body.appendChild(scannerInput);
-        scannerInput.focus();
-        scannerInput.addEventListener('change', (e) => {
-            const code = e.target.value;
-            document.getElementById('auditBarcode').value = code;
-            lookupProduct(code);
-            document.body.removeChild(scannerInput);
-        });
+    function handleBarcodeKey(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // STOP AUTO-SUBMIT
+            const code = e.target.value.trim();
+            if (code) lookupProduct(code);
+        }
     }
 
     function generatePLU() {
@@ -219,6 +218,7 @@
         document.getElementById('auditDesc').value = "New Item";
         document.getElementById('auditSize').value = "";
         resetCounts();
+        document.getElementById('auditDesc').focus();
     }
 
     async function lookupProduct(code) {
@@ -228,15 +228,15 @@
             document.getElementById('auditMfg').value = data.mfg;
             document.getElementById('auditDesc').value = data.desc;
             document.getElementById('auditSize').value = data.size;
-            document.getElementById('auditCat').value = data.cat || "Snacks";
-            document.getElementById('auditPrice').value = data.price;
             document.getElementById('auditPackQty').value = "1";
             document.getElementById('auditNumPacks').value = "";
             currentField = "auditNumPacks";
+            document.getElementById('auditNumPacks').focus(); // Ready for quantity
             calcTotal();
         } else {
             document.getElementById('auditDesc').value = "NEW ITEM";
             resetCounts();
+            document.getElementById('auditDesc').focus();
         }
     }
 
@@ -267,12 +267,15 @@
         document.getElementById('auditFinalCount').value = total;
     }
 
-    document.addEventListener("click", (e) => { 
-        if (!['INPUT', 'BUTTON', 'I', 'SELECT', 'OPTION'].includes(e.target.tagName)) {
-            const bc = document.getElementById("barcode");
-            if (bc) bc.focus();
+    function validateAuditForm() {
+        const bc = document.getElementById('auditBarcode').value;
+        const desc = document.getElementById('auditDesc').value;
+        if (!bc || !desc) {
+            alert("Please scan an item and provide a description.");
+            return false;
         }
-    });
+        return true;
+    }
 </script>
 </body>
 </html>

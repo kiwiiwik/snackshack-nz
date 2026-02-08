@@ -47,13 +47,11 @@ def index():
                                           .order_by(Products.last_audited.desc())\
                                           .limit(5).all()
 
-    # Organized Category Order
     cat_order = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
     quick_items = Products.query.filter_by(is_quick_item=True).all()
     
     grouped_products = {cat: [] for cat in cat_order}
     for p in quick_items:
-        # Fallback to Snacks if category is NULL
         cat = p.category if p.category in grouped_products else "Snacks"
         grouped_products[cat].append(p)
     
@@ -90,9 +88,7 @@ def get_product(barcode):
             "found": True, 
             "mfg": p.manufacturer, 
             "desc": p.description, 
-            "size": p.size, 
-            "price": str(p.price),
-            "cat": p.category,
+            "size": p.size,
             "soh": p.stock_level
         })
     return jsonify({"found": False})
@@ -104,26 +100,22 @@ def audit_submit():
     if not admin or not admin.is_admin: return redirect(url_for('main.index'))
 
     barcode = request.form.get('barcode').strip()
-    category = request.form.get('category', 'Snacks')
     mfg = request.form.get('manufacturer', '').strip()
     desc = request.form.get('description', '').strip()
     size = request.form.get('size', '').strip()
-    price_val = Decimal(request.form.get('price', '2.50'))
     count = int(request.form.get('final_count', 0))
 
     product = Products.query.get(barcode)
     if not product:
         product = Products(upc_code=barcode, manufacturer=mfg, description=desc, 
-                           size=size, price=price_val, stock_level=count, 
-                           is_quick_item=True, category=category, 
+                           size=size, price=Decimal('2.50'), stock_level=count, 
+                           is_quick_item=True, category='Snacks', 
                            last_audited=datetime.utcnow())
         db.session.add(product)
     else:
-        product.category = category
         product.manufacturer = mfg
         product.description = desc
         product.size = size
-        product.price = price_val
         product.stock_level = count
         product.last_audited = datetime.utcnow()
     
