@@ -12,7 +12,7 @@
         .initial-avatar { width: 70px; height: 70px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.5rem; }
         .product-img { width: 100%; height: 100px; object-fit: contain; padding: 5px; }
         .price-text { color: #198754; font-weight: bold; font-size: 1rem; }
-        .switchboard-btn { height: 180px; border-radius: 25px; font-size: 1.5rem; font-weight: bold; transition: 0.2s; border: none; width: 100%; color: white; }
+        .switchboard-btn { height: 160px; border-radius: 25px; font-size: 1.4rem; font-weight: bold; transition: 0.2s; border: none; width: 100%; color: white; }
         .switchboard-btn:active { transform: scale(0.95); }
         .audit-btn-large { height: 110px; font-size: 1.2rem; font-weight: bold; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; border: none; width: 100%; }
         .num-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -43,7 +43,7 @@
 
 <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center">{{ msg }}</div>{% endfor %}{% endif %}
+        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
     {% if not user %}
@@ -67,16 +67,32 @@
     {% endif %}
 </div>
 
+{% if just_bought %}
+<div class="fixed-transaction-bar p-3 bg-white border-top shadow-lg">
+    <div class="container d-flex justify-content-between align-items-center">
+        <span class="fs-5">Purchased: <strong>{{ just_bought }}</strong></span>
+        <a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-lg">Undo Purchase</a>
+    </div>
+</div>
+{% endif %}
+
+{% if user and user.is_admin %}
 <div class="modal fade" id="switchboardModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">
             <div class="modal-body p-5 text-center">
                 <h2 class="fw-bold mb-5 text-dark">Admin Switchboard</h2>
-                <div class="row g-4">
-                    <div class="col-md-6"><button class="switchboard-btn bg-danger" data-bs-toggle="modal" data-bs-target="#auditModal"><i class="fas fa-clipboard-check mb-3 fa-2x"></i><br>AUDIT STATION</button></div>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6"><button class="switchboard-btn bg-danger" data-bs-toggle="modal" data-bs-target="#auditModal" data-bs-dismiss="modal"><i class="fas fa-clipboard-check mb-3 fa-2x"></i><br>AUDIT STATION</button></div>
                     <div class="col-md-6"><a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center text-decoration-none"><i class="fas fa-boxes mb-3 fa-2x"></i><br>PRODUCT MANAGER</a></div>
                 </div>
-                <div class="mt-5"><a href="{{ url_for('main.clear_audit_history') }}" class="text-muted small text-decoration-none" onclick="return confirm('Clear recent items list?')"><i class="fas fa-trash-alt me-1"></i> Clear Audit Session History</a></div>
+                <div class="border-top pt-4">
+                    <div class="d-flex justify-content-center gap-4 flex-wrap">
+                        <a href="{{ url_for('main.clear_audit_history') }}" class="text-muted small text-decoration-none"><i class="fas fa-history me-1"></i> Reset Audit List</a>
+                        <a href="{{ url_for('main.reset_balances') }}" class="text-warning small fw-bold text-decoration-none" onclick="return confirm('Set all user balances to $0.00?')"><i class="fas fa-coins me-1"></i> RESET ALL BALANCES</a>
+                        <a href="{{ url_for('main.nuke_transactions') }}" class="text-danger small fw-bold text-decoration-none" onclick="return confirm('Delete ALL transactions? This cannot be undone.')"><i class="fas fa-bomb me-1"></i> NUKE TRANSACTIONS</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -105,8 +121,8 @@
                                 <div class="row g-2 mb-3"><div class="col-6"><div class="field-label">Brand</div><input type="text" name="manufacturer" id="auditMfg" class="form-control"></div><div class="col-6"><div class="field-label">Size</div><input type="text" name="size" id="auditSize" class="form-control"></div></div>
                                 <div class="mb-4"><div class="field-label">Item Description</div><input type="text" name="description" id="auditDesc" class="form-control"></div>
                                 <div class="row g-3 mb-4">
-                                    <div class="col-6"><div class="field-label">Qty per Pack</div><input type="text" id="auditPackQty" class="form-control text-center fw-bold" value="1" onclick="setFocus('auditPackQty')"></div>
-                                    <div class="col-6"><div class="field-label">Num Packs</div><input type="text" id="auditNumPacks" class="form-control text-center fw-bold" placeholder="0" onclick="setFocus('auditNumPacks')"></div>
+                                    <div class="col-6"><div class="field-label text-center">Qty per Pack</div><input type="text" id="auditPackQty" class="form-control text-center fw-bold" value="1" onclick="setFocus('auditPackQty')"></div>
+                                    <div class="col-6"><div class="field-label text-center">Num Packs</div><input type="text" id="auditNumPacks" class="form-control text-center fw-bold" placeholder="0" onclick="setFocus('auditNumPacks')"></div>
                                 </div>
                                 <div class="text-center p-3 bg-primary bg-opacity-10 rounded mb-4"><div class="field-label">Final Count</div><input type="hidden" name="final_count" id="auditFinalCount" value="0"><h1 class="display-4 fw-bold text-primary m-0" id="auditDisplayTotal">0</h1></div>
                                 <button type="submit" class="audit-btn-large bg-success shadow py-4">SAVE</button>
@@ -116,8 +132,13 @@
                     <div class="col-md-3">
                         <h6 class="fw-bold text-muted mb-3">Recent Audits</h6>
                         <div id="auditHistory">
-                            {% if recent_audits %}{% for r in recent_audits %}<div class="recent-audit-item shadow-sm"><div class="fw-bold">{{ r.description }}</div><div class="small text-muted">{{ r.stock_level }} units</div></div>{% endfor %}
-                            {% else %}<div class="text-muted small">Ready for first scan...</div>{% endif %}
+                            {% if recent_audits %}
+                                {% for r in recent_audits %}
+                                <div class="recent-audit-item shadow-sm"><div class="fw-bold">{{ r.description }}</div><div class="small text-muted">{{ r.stock_level }} units</div></div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-muted small">Scan an item...</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -127,11 +148,12 @@
 </div>
 {% endif %}
 
+<div style="display: none;"><form action="{{ url_for('main.scan') }}" method="POST"><input type="text" name="barcode" id="barcode" autofocus autocomplete="off"></form></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let currentField = "auditNumPacks"; 
     window.onload = () => { if (new URLSearchParams(window.location.search).get('open_admin')) { new bootstrap.Modal(document.getElementById('switchboardModal')).show(); } };
-
     function setFocus(id) { currentField = id; }
     function focusScanField() { const bc = document.getElementById('auditBarcode'); bc.value = ""; bc.focus(); }
     function generatePLU() { document.getElementById('auditBarcode').value = "PLU-" + Math.floor(1000 + Math.random() * 9999); resetCounts(); }

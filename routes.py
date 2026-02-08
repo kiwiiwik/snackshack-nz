@@ -49,12 +49,25 @@ def index():
     
     return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, recent_audits=recent_audits, just_bought=request.args.get('bought'))
 
-@main.route('/scan', methods=['POST'])
-def scan():
-    barcode = request.form.get('barcode')
-    result = process_barcode(barcode)
-    if result["status"] == "needs_pin": return redirect(url_for('main.index', needs_pin=result["user_id"]))
-    return redirect(url_for('main.index', bought=result.get("description")))
+@main.route('/admin/nuke-transactions')
+def nuke_transactions():
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    admin = Users.query.get(int(session['user_id']))
+    if admin and admin.is_admin:
+        Transactions.query.delete()
+        db.session.commit()
+        flash("DATABASE NUKED: All transaction history cleared.", "danger")
+    return redirect(url_for('main.index', open_admin=1))
+
+@main.route('/admin/reset-balances')
+def reset_balances():
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    admin = Users.query.get(int(session['user_id']))
+    if admin and admin.is_admin:
+        Users.query.update({Users.balance: 0.00})
+        db.session.commit()
+        flash("All user balances have been reset to $0.00.", "warning")
+    return redirect(url_for('main.index', open_admin=1))
 
 @main.route('/admin/get-product/<barcode>')
 def get_product(barcode):
@@ -74,7 +87,7 @@ def get_product(barcode):
 @main.route('/admin/audit-submit', methods=['POST'])
 def audit_submit():
     if 'user_id' not in session: return redirect(url_for('main.index'))
-    barcode = request.form.get('barcode').strip()
+    barcode = request.form.get('barcode', '').strip()
     mfg, desc, size = request.form.get('manufacturer', '').strip(), request.form.get('description', '').strip(), request.form.get('size', '').strip()
     count = int(request.form.get('final_count', 0))
     product = Products.query.get(barcode)
@@ -101,7 +114,7 @@ def manage_products():
 @main.route('/admin/product/save', methods=['POST'])
 def save_product_manual():
     if 'user_id' not in session: return redirect(url_for('main.index'))
-    upc = request.form.get('upc_code').strip()
+    upc = request.form.get('upc_code', '').strip()
     product = Products.query.get(upc) or Products(upc_code=upc)
     if upc not in [p.upc_code for p in Products.query.all()]: db.session.add(product)
     product.manufacturer, product.description, product.size = request.form.get('manufacturer'), request.form.get('description'), request.form.get('size')
@@ -118,11 +131,18 @@ def delete_product(upc):
         try:
             db.session.delete(product)
             db.session.commit()
-            flash("Item removed.", "info")
+            flash("Item deleted.", "info")
         except IntegrityError:
             db.session.rollback()
-            flash(f"Error: '{product.description}' is linked to past sales. Suggest setting stock to 0 instead of deleting.", "danger")
+            flash(f"Constraint Error: Cannot delete '{product.description}' because it has transaction history. Use NUKE button to clear history first.", "danger")
     return redirect(url_for('main.manage_products'))
+
+@main.route('/scan', methods=['POST'])
+def scan():
+    barcode = request.form.get('barcode')
+    result = process_barcode(barcode)
+    if result["status"] == "needs_pin": return redirect(url_for('main.index', needs_pin=result["user_id"]))
+    return redirect(url_for('main.index', bought=result.get("description")))
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
