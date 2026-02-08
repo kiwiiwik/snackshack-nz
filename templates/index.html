@@ -225,13 +225,13 @@
         const response = await fetch(`/admin/get-product/${code}`);
         const data = await response.json();
         if (data.found) {
-            document.getElementById('auditMfg').value = data.mfg;
-            document.getElementById('auditDesc').value = data.desc;
-            document.getElementById('auditSize').value = data.size;
+            document.getElementById('auditMfg').value = data.mfg || "";
+            document.getElementById('auditDesc').value = data.desc || "";
+            document.getElementById('auditSize').value = data.size || "";
             document.getElementById('auditPackQty').value = "1";
             document.getElementById('auditNumPacks').value = "";
             currentField = "auditNumPacks";
-            document.getElementById('auditNumPacks').focus(); // Ready for quantity
+            document.getElementById('auditNumPacks').focus(); 
             calcTotal();
         } else {
             document.getElementById('auditDesc').value = "NEW ITEM";
