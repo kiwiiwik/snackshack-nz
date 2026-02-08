@@ -56,7 +56,7 @@ def nuke_transactions():
     if admin and admin.is_admin:
         Transactions.query.delete()
         db.session.commit()
-        flash("DATABASE NUKED: All transaction history cleared.", "danger")
+        flash("DATABASE NUKED: Transaction history cleared.", "danger")
     return redirect(url_for('main.index', open_admin=1))
 
 @main.route('/admin/reset-balances')
@@ -66,7 +66,7 @@ def reset_balances():
     if admin and admin.is_admin:
         Users.query.update({Users.balance: 0.00})
         db.session.commit()
-        flash("All user balances have been reset to $0.00.", "warning")
+        flash("All account balances reset to $0.00.", "warning")
     return redirect(url_for('main.index', open_admin=1))
 
 @main.route('/admin/get-product/<barcode>')
@@ -116,7 +116,7 @@ def save_product_manual():
     if 'user_id' not in session: return redirect(url_for('main.index'))
     upc = request.form.get('upc_code', '').strip()
     product = Products.query.get(upc) or Products(upc_code=upc)
-    if upc not in [p.upc_code for p in Products.query.all()]: db.session.add(product)
+    if not Products.query.get(upc): db.session.add(product)
     product.manufacturer, product.description, product.size = request.form.get('manufacturer'), request.form.get('description'), request.form.get('size')
     product.price, product.category, product.stock_level = Decimal(request.form.get('price', '0.00')), request.form.get('category'), int(request.form.get('stock_level', 0))
     product.is_quick_item = 'is_quick_item' in request.form
@@ -134,15 +134,22 @@ def delete_product(upc):
             flash("Item deleted.", "info")
         except IntegrityError:
             db.session.rollback()
-            flash(f"Constraint Error: Cannot delete '{product.description}' because it has transaction history. Use NUKE button to clear history first.", "danger")
+            flash(f"Constraint Conflict: '{product.description}' is linked to historical sales. Set stock to 0 instead or use NUKE.", "danger")
     return redirect(url_for('main.manage_products'))
 
-@main.route('/scan', methods=['POST'])
-def scan():
-    barcode = request.form.get('barcode')
-    result = process_barcode(barcode)
-    if result["status"] == "needs_pin": return redirect(url_for('main.index', needs_pin=result["user_id"]))
-    return redirect(url_for('main.index', bought=result.get("description")))
+@main.route('/undo')
+def undo():
+    if 'user_id' in session:
+        uid = int(session['user_id'])
+        lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
+        if lt:
+            u, p = Users.query.get(uid), Products.query.get(lt.upc_code)
+            u.balance += Decimal(str(lt.amount))
+            if p: p.stock_level += 1
+            db.session.delete(lt)
+            db.session.commit()
+            flash("Purchase Undone.", "info")
+    return redirect(url_for('main.index'))
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):

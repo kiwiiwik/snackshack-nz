@@ -21,6 +21,7 @@
         .field-label { font-size: 0.7rem; font-weight: bold; color: #6c757d; text-transform: uppercase; margin-bottom: 2px; }
         .fixed-transaction-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1030; }
         .recent-audit-item { font-size: 0.85rem; border-left: 4px solid #198754; background: #fdfdfd; padding: 8px; margin-bottom: 8px; border-radius: 0 8px 8px 0; }
+        .version-tag { font-size: 0.65rem; color: #adb5bd; position: absolute; bottom: 10px; right: 15px; }
     </style>
 </head>
 <body>
@@ -43,7 +44,7 @@
 
 <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
+        {% if messages %}{for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
     {% if not user %}
@@ -83,16 +84,17 @@
             <div class="modal-body p-5 text-center">
                 <h2 class="fw-bold mb-5 text-dark">Admin Switchboard</h2>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6"><button class="switchboard-btn bg-danger" data-bs-toggle="modal" data-bs-target="#auditModal" data-bs-dismiss="modal"><i class="fas fa-clipboard-check mb-3 fa-2x"></i><br>AUDIT STATION</button></div>
-                    <div class="col-md-6"><a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center text-decoration-none"><i class="fas fa-boxes mb-3 fa-2x"></i><br>PRODUCT MANAGER</a></div>
+                    <div class="col-md-6"><button class="switchboard-btn bg-danger shadow" data-bs-toggle="modal" data-bs-target="#auditModal" data-bs-dismiss="modal"><i class="fas fa-clipboard-check mb-3 fa-2x"></i><br>AUDIT STATION</button></div>
+                    <div class="col-md-6"><a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center shadow text-decoration-none"><i class="fas fa-boxes mb-3 fa-2x"></i><br>PRODUCT MANAGER</a></div>
                 </div>
-                <div class="border-top pt-4">
-                    <div class="d-flex justify-content-center gap-4 flex-wrap">
-                        <a href="{{ url_for('main.clear_audit_history') }}" class="text-muted small text-decoration-none"><i class="fas fa-history me-1"></i> Reset Audit List</a>
-                        <a href="{{ url_for('main.reset_balances') }}" class="text-warning small fw-bold text-decoration-none" onclick="return confirm('Set all user balances to $0.00?')"><i class="fas fa-coins me-1"></i> RESET ALL BALANCES</a>
-                        <a href="{{ url_for('main.nuke_transactions') }}" class="text-danger small fw-bold text-decoration-none" onclick="return confirm('Delete ALL transactions? This cannot be undone.')"><i class="fas fa-bomb me-1"></i> NUKE TRANSACTIONS</a>
+                <div class="border-top pt-4 mt-4">
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="{{ url_for('main.clear_audit_history') }}" class="btn btn-sm btn-outline-secondary">Reset Audit List</a>
+                        <a href="{{ url_for('main.reset_balances') }}" class="btn btn-sm btn-outline-warning fw-bold" onclick="return confirm('Reset all balances to $0.00?')">Reset Balances</a>
+                        <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('NUKE ALL TRANSACTIONS? (History will be gone)')">NUKE DATABASE</a>
                     </div>
                 </div>
+                <div class="version-tag">v1.1.0</div>
             </div>
         </div>
     </div>
@@ -105,13 +107,13 @@
             <div class="modal-body p-4">
                 <div class="row g-4">
                     <div class="col-md-3">
-                        <button onclick="focusScanField()" class="audit-btn-large bg-danger mb-2 shadow-sm"><i class="fas fa-barcode mb-1"></i> Scan Barcode</button>
-                        <button onclick="generatePLU()" class="audit-btn-large bg-secondary mb-4 shadow-sm"><i class="fas fa-plus-circle mb-1"></i> No Barcode?</button>
+                        <button onclick="focusScanField()" class="audit-btn-large bg-danger mb-2 shadow"><i class="fas fa-barcode"></i> Scan Barcode</button>
+                        <button onclick="generatePLU()" class="audit-btn-large bg-secondary mb-4 shadow"><i class="fas fa-plus-circle"></i> No Barcode?</button>
                         <div class="num-pad bg-light p-3 rounded">
-                            <button class="num-btn" onclick="numPress('1')">1</button><button class="num-btn" onclick="numPress('2')">2</button><button class="num-btn" onclick="numPress('3')">3</button>
-                            <button class="num-btn" onclick="numPress('4')">4</button><button class="num-btn" onclick="numPress('5')">5</button><button class="num-btn" onclick="numPress('6')">6</button>
-                            <button class="num-btn" onclick="numPress('7')">7</button><button class="num-btn" onclick="numPress('8')">8</button><button class="num-btn" onclick="numPress('9')">9</button>
-                            <button class="num-btn" onclick="numPress('0')">0</button><button class="num-btn text-primary" onclick="numPress('*')">x</button><button class="num-btn text-danger" onclick="numPress('C')">C</button>
+                            <button class="num-btn shadow-sm" onclick="numPress('1')">1</button><button class="num-btn shadow-sm" onclick="numPress('2')">2</button><button class="num-btn shadow-sm" onclick="numPress('3')">3</button>
+                            <button class="num-btn shadow-sm" onclick="numPress('4')">4</button><button class="num-btn shadow-sm" onclick="numPress('5')">5</button><button class="num-btn shadow-sm" onclick="numPress('6')">6</button>
+                            <button class="num-btn shadow-sm" onclick="numPress('7')">7</button><button class="num-btn shadow-sm" onclick="numPress('8')">8</button><button class="num-btn shadow-sm" onclick="numPress('9')">9</button>
+                            <button class="num-btn shadow-sm" onclick="numPress('0')">0</button><button class="num-btn shadow-sm text-primary" onclick="numPress('*')">x</button><button class="num-btn shadow-sm text-danger" onclick="numPress('C')">C</button>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -121,8 +123,8 @@
                                 <div class="row g-2 mb-3"><div class="col-6"><div class="field-label">Brand</div><input type="text" name="manufacturer" id="auditMfg" class="form-control"></div><div class="col-6"><div class="field-label">Size</div><input type="text" name="size" id="auditSize" class="form-control"></div></div>
                                 <div class="mb-4"><div class="field-label">Item Description</div><input type="text" name="description" id="auditDesc" class="form-control"></div>
                                 <div class="row g-3 mb-4">
-                                    <div class="col-6"><div class="field-label text-center">Qty per Pack</div><input type="text" id="auditPackQty" class="form-control text-center fw-bold" value="1" onclick="setFocus('auditPackQty')"></div>
-                                    <div class="col-6"><div class="field-label text-center">Num Packs</div><input type="text" id="auditNumPacks" class="form-control text-center fw-bold" placeholder="0" onclick="setFocus('auditNumPacks')"></div>
+                                    <div class="col-6"><div class="field-label">Qty per Pack</div><input type="text" id="auditPackQty" class="form-control text-center fw-bold" value="1" onclick="setFocus('auditPackQty')"></div>
+                                    <div class="col-6"><div class="field-label">Num Packs</div><input type="text" id="auditNumPacks" class="form-control text-center fw-bold" placeholder="0" onclick="setFocus('auditNumPacks')"></div>
                                 </div>
                                 <div class="text-center p-3 bg-primary bg-opacity-10 rounded mb-4"><div class="field-label">Final Count</div><input type="hidden" name="final_count" id="auditFinalCount" value="0"><h1 class="display-4 fw-bold text-primary m-0" id="auditDisplayTotal">0</h1></div>
                                 <button type="submit" class="audit-btn-large bg-success shadow py-4">SAVE</button>
@@ -132,16 +134,12 @@
                     <div class="col-md-3">
                         <h6 class="fw-bold text-muted mb-3">Recent Audits</h6>
                         <div id="auditHistory">
-                            {% if recent_audits %}
-                                {% for r in recent_audits %}
-                                <div class="recent-audit-item shadow-sm"><div class="fw-bold">{{ r.description }}</div><div class="small text-muted">{{ r.stock_level }} units</div></div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="text-muted small">Scan an item...</div>
-                            {% endif %}
+                            {% if recent_audits %}{% for r in recent_audits %}<div class="recent-audit-item shadow-sm"><div class="fw-bold">{{ r.description }}</div><div class="small text-muted">{{ r.stock_level }} units</div></div>{% endfor %}
+                            {% else %}<div class="text-muted small">Ready for scan...</div>{% endif %}
                         </div>
                     </div>
                 </div>
+                <div class="version-tag">v1.1.0</div>
             </div>
         </div>
     </div>
@@ -181,5 +179,6 @@
         document.getElementById('auditFinalCount').value = total;
     }
 </script>
+<div class="version-tag">Main Kiosk v1.1.0</div>
 </body>
 </html>
