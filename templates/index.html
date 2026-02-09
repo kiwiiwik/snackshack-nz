@@ -58,21 +58,23 @@
         <div class="tab-content">
             {% for category, items in grouped_products.items() %}
             <div class="tab-pane fade {{ 'show active' if loop.first }}" id="cat-{{ loop.index }}"><div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-4">
-                {% for p in items %}<div class="col"><a href="{{ url_for('main.manual_add', barcode=p.upc_code) }}" class="text-decoration-none text-dark"><div class="card h-100 text-center border-0 shadow-sm p-3 user-tile"><span class="badge bg-light text-dark border mb-2">{{ p.stock_level }} left</span><img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';"><div class="fw-bold small">{{ p.description }}</div><div class="price-text">${{ "%.2f"|format(p.price) }}</div></div></a></div>{% endfor %}
+                {% for p in items %}
+                <div class="col">
+                    <a href="{{ url_for('main.manual_add', barcode=p.upc_code or 'UNKNOWN') }}" class="text-decoration-none text-dark">
+                        <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile">
+                            <span class="badge bg-light text-dark border mb-2">{{ p.stock_level }} left</span>
+                            <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';">
+                            <div class="fw-bold small">{{ p.description }}</div>
+                            <div class="price-text">${{ "%.2f"|format(p.price) }}</div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
             </div></div>
             {% endfor %}
         </div>
     {% endif %}
 </div>
-
-{% if just_bought %}
-<div class="fixed-transaction-bar p-3 bg-white border-top shadow-lg">
-    <div class="container d-flex justify-content-between align-items-center">
-        <span class="fs-5">Purchased: <strong>{{ just_bought }}</strong></span>
-        <a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-lg">Undo Purchase</a>
-    </div>
-</div>
-{% endif %}
 
 {% if user and user.is_admin %}
 <div class="modal fade" id="switchboardModal" tabindex="-1">
@@ -89,10 +91,10 @@
                     <div class="d-flex justify-content-center gap-3">
                         <a href="{{ url_for('main.monthly_report') }}" class="btn btn-sm btn-outline-info">Report</a>
                         <a href="{{ url_for('main.reset_balances') }}" class="btn btn-sm btn-outline-warning fw-bold" onclick="return confirm('Reset balances?')">Reset Balances</a>
-                        <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('NUKE ALL?')">NUKE HISTORY</a>
+                        <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('NUKE HISTORY?')">NUKE ALL</a>
                     </div>
                 </div>
-                <div class="version-tag">v1.3.1</div>
+                <div class="version-tag">v1.3.2</div>
             </div>
         </div>
     </div>
@@ -132,7 +134,7 @@
                         <h6 class="fw-bold text-muted mb-3">Recent Audits</h6>
                         <div id="auditHistory">
                             {% if recent_audits %}{% for r in recent_audits %}<div class="recent-audit-item shadow-sm"><div class="fw-bold">{{ r.description }}</div><div class="small text-muted">{{ r.stock_level }} units</div></div>{% endfor %}
-                            {% else %}<div class="text-muted small">Ready for scan...</div>{% endif %}
+                            {% else %}<div class="text-muted small">Scan an item...</div>{% endif %}
                         </div>
                     </div>
                 </div>
@@ -173,6 +175,5 @@
         document.getElementById('auditFinalCount').value = total;
     }
 </script>
-<div class="version-tag">Kiosk v1.3.1</div>
 </body>
 </html>

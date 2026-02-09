@@ -12,7 +12,7 @@
 <nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/?open_admin=1"><i class="fas fa-arrow-left me-2"></i> Admin Switchboard</a>
-        <button class="btn btn-light btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#userModal" onclick="clearUserForm()"><i class="fas fa-user-plus me-1"></i> Add New Staff</button>
+        <button class="btn btn-light btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#userModal" onclick="clearUserForm()"><i class="fas fa-user-plus me-1"></i> Add New Staff</button>
     </div>
 </nav>
 
@@ -21,28 +21,27 @@
         {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
     
-    <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Name</th><th>Card ID</th><th>Email</th><th>Balance</th><th>Role</th><th class="text-end px-4">Actions</th></tr></thead>
+    <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Name</th><th>Card ID</th><th>Balance</th><th>Role</th><th class="text-end px-4">Actions</th></tr></thead>
         <tbody>{% for u in users %}<tr>
             <td class="fw-bold">{{ u.first_name }} {{ u.last_name }}</td>
             <td><code>{{ u.card_id }}</code></td>
-            <td>{{ u.email or '-' }}</td>
             <td class="{{ 'text-danger' if u.balance < 0 else 'text-success' }} fw-bold">${{ "%.2f"|format(u.balance) }}</td>
             <td>{% if u.is_admin %}<span class="badge bg-danger">Admin</span>{% else %}<span class="badge bg-secondary">User</span>{% endif %}</td>
             <td class="text-end px-4">
                 <button type="button" class="btn btn-sm btn-success shadow-sm" onclick='openPaymentModal({{ u.user_id }}, "{{ u.first_name }}")'><i class="fas fa-hand-holding-dollar"></i></button>
-                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm ms-1" onclick='editUser({{ {"user_id": u.user_id, "first_name": u.first_name, "last_name": u.last_name, "card_id": u.card_id, "email": u.email, "is_admin": u.is_admin} | tojson }})'><i class="fas fa-edit"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm ms-1" onclick='editUser({{ {"user_id": u.user_id, "first_name": u.first_name, "last_name": u.last_name, "card_id": u.card_id, "is_admin": u.is_admin} | tojson }})'><i class="fas fa-edit"></i></button>
                 <a href="{{ url_for('main.delete_user', user_id=u.user_id) }}" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
             </td>
         </tr>{% endfor %}</tbody></table></div></div>
 </div>
 
 <div class="modal fade" id="paymentModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="{{ url_for('main.record_payment') }}" method="POST" class="modal-content shadow-lg border-0" style="border-radius: 20px;">
-    <div class="modal-header border-0 pb-0"><h5 class="fw-bold">Record Payment</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-header border-0 pb-0"><h5 class=\"fw-bold\">Record Payment</h5><button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button></div>
     <div class="modal-body p-4 text-center">
         <input type="hidden" name="user_id" id="payUserId">
         <p class="text-muted mb-1">Recording payment for</p><h4 class="fw-bold mb-4" id="payUserName">User</h4>
         <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Payment Amount ($)</label><input type="number" step="0.01" name="amount" class="form-control form-control-lg text-center fw-bold" placeholder="0.00" required autofocus></div>
-        <p class="small text-muted">Updates balance and logs payment in history.</p>
+        <p class="small text-muted">Amount will be added to balance and logged in transactions.</p>
     </div>
     <div class="modal-footer border-0"><button type="submit" class="btn btn-success w-100 py-3 shadow fw-bold">CONFIRM PAYMENT</button></div>
 </form></div></div>
@@ -51,20 +50,19 @@
     <div class="modal-header border-0 pb-0"><h5 class="fw-bold" id="userModalTitle">Staff Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
         <input type="hidden" name="user_id" id="formUserId">
-        <div class="mb-3"><label class="form-label small fw-bold text-muted">CARD ID / SCAN CODE</label><input type="text" name="card_id" id="formCardId" class="form-control" required></div>
-        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted">FIRST NAME</label><input type="text" name="first_name" id="formFirstName" class="form-control" required></div><div class="col-6"><label class="form-label small fw-bold text-muted">LAST NAME</label><input type="text" name="last_name" id="formLastName" class="form-control" required></div></div>
-        <div class="mb-3"><label class="form-label small fw-bold text-muted">EMAIL ADDRESS</label><input type="email" name="email" id="formEmail" class="form-control"></div>
+        <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Card ID / Scan Code</label><input type="text" name="card_id" id="formCardId" class="form-control" required></div>
+        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">First Name</label><input type="text" name="first_name" id="formFirstName" class="form-control" required></div><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Last Name</label><input type="text" name="last_name" id="formLastName" class="form-control" required></div></div>
         <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_admin" id="formIsAdmin"><label class="form-check-label small fw-bold" for="formIsAdmin">Make Administrator</label></div>
     </div>
     <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold">SAVE STAFF MEMBER</button></div>
 </form></div></div>
 
-<div class="version-tag">User Manager v1.3.1</div>
+<div class="version-tag">User Manager v1.3.2</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function openPaymentModal(id, name) { document.getElementById('payUserId').value = id; document.getElementById('payUserName').innerText = name; new bootstrap.Modal(document.getElementById('paymentModal')).show(); }
-    function clearUserForm() { document.getElementById('userModalTitle').innerText = "Add New Staff"; document.getElementById('formUserId').value = ""; document.getElementById('formCardId').value = ""; document.getElementById('formCardId').readOnly = false; document.getElementById('formFirstName').value = ""; document.getElementById('formLastName').value = ""; document.getElementById('formEmail').value = ""; document.getElementById('formIsAdmin').checked = false; }
-    function editUser(u) { document.getElementById('userModalTitle').innerText = "Edit Staff Member"; document.getElementById('formUserId').value = u.user_id; document.getElementById('formCardId').value = u.card_id; document.getElementById('formCardId').readOnly = true; document.getElementById('formFirstName').value = u.first_name; document.getElementById('formLastName').value = u.last_name; document.getElementById('formEmail').value = u.email || ""; document.getElementById('formIsAdmin').checked = !!u.is_admin; new bootstrap.Modal(document.getElementById('userModal')).show(); }
+    function clearUserForm() { document.getElementById('userModalTitle').innerText = "Add New Staff"; document.getElementById('formUserId').value = ""; document.getElementById('formCardId').value = ""; document.getElementById('formCardId').readOnly = false; document.getElementById('formFirstName').value = ""; document.getElementById('formLastName').value = ""; document.getElementById('formIsAdmin').checked = false; }
+    function editUser(u) { document.getElementById('userModalTitle').innerText = "Edit Staff Member"; document.getElementById('formUserId').value = u.user_id; document.getElementById('formCardId').value = u.card_id; document.getElementById('formCardId').readOnly = true; document.getElementById('formFirstName').value = u.first_name; document.getElementById('formLastName').value = u.last_name; document.getElementById('formIsAdmin').checked = !!u.is_admin; new bootstrap.Modal(document.getElementById('userModal')).show(); }
 </script>
 </body>
 </html>
