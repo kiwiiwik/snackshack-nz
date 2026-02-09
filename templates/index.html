@@ -28,7 +28,7 @@
 
 <nav class="navbar navbar-light bg-white shadow-sm mb-4">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/">🥝 Snack Shack</a>
+        <a class="navbar-brand fw-bold" href="/">ðŸ¥ Snack Shack</a>
         {% if user %}
         <div class="d-flex align-items-center">
             {% if user.is_admin %}
@@ -154,8 +154,40 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let currentField = "auditNumPacks"; 
-    window.onload = () => { if (new URLSearchParams(window.location.search).get('open_admin')) { new bootstrap.Modal(document.getElementById('switchboardModal')).show(); } };
+    let currentField = "auditNumPacks";
+    // --- Remember active product tab across page loads/redirects (per-user) ---
+    const userId = "{{ user.user_id if user else 'anon' }}";
+    const tabKeyTarget = 'activeSnackTabTarget:' + userId;
+    const tabKeyLabel  = 'activeSnackTabLabel:'  + userId;
+
+    document.addEventListener('shown.bs.tab', function (e) {
+        const btn = e.target;
+        if (!btn) return;
+        const target = btn.getAttribute('data-bs-target');
+        const label = (btn.textContent || '').trim();
+        if (target) localStorage.setItem(tabKeyTarget, target);
+        if (label)  localStorage.setItem(tabKeyLabel,  label);
+    });
+
+    window.addEventListener('DOMContentLoaded', function () {
+        const savedTarget = localStorage.getItem(tabKeyTarget);
+        const savedLabel  = localStorage.getItem(tabKeyLabel);
+
+        let btn = null;
+
+        if (savedTarget) {
+            btn = document.querySelector('#pills-tab button[data-bs-target="' + savedTarget + '"]');
+        }
+        if (!btn && savedLabel) {
+            const buttons = document.querySelectorAll('#pills-tab button[data-bs-toggle="pill"]');
+            btn = Array.from(buttons).find(b => (b.textContent || '').trim() === savedLabel) || null;
+        }
+
+        if (btn && window.bootstrap) {
+            bootstrap.Tab.getOrCreateInstance(btn).show();
+        }
+    });
+window.onload = () => { if (new URLSearchParams(window.location.search).get('open_admin')) { new bootstrap.Modal(document.getElementById('switchboardModal')).show(); } };
     function setFocus(id) { currentField = id; }
     function focusScanField() { const bc = document.getElementById('auditBarcode'); bc.value = ""; bc.focus(); }
     function generatePLU() { document.getElementById('auditBarcode').value = "PLU-" + Math.floor(1000 + Math.random() * 9999); resetCounts(); }
