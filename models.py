@@ -29,7 +29,6 @@ class Products(db.Model):
     category = db.Column('Category', db.String(50))
 
     def to_dict(self):
-        """Converts database object to dictionary for JSON serialization."""
         return {
             'upc_code': self.upc_code,
             'manufacturer': self.manufacturer or "",
