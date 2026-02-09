@@ -21,10 +21,15 @@ def process_barcode(barcode):
     if 'user_id' in session:
         product = Products.query.filter_by(upc_code=barcode).first()
         if product:
+            # Hard stop: do not allow purchase when stock is zero (covers direct URL + scan)
+            if product.stock_level is not None and product.stock_level <= 0:
+                flash(f"Out of stock: {product.description}", "warning")
+                return {"status": "out_of_stock", "description": product.description}
+
             u = Users.query.get(int(session['user_id']))
             price = Decimal(str(product.price or 0.0))
             u.balance = Decimal(str(u.balance or 0.0)) - price
-            if product.stock_level > 0: product.stock_level -= 1
+            product.stock_level = (product.stock_level or 0) - 1
             db.session.add(Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price))
             db.session.commit()
             return {"status": "purchased", "description": product.description}
@@ -154,7 +159,15 @@ def undo():
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
     res = process_barcode(barcode)
-    return redirect(url_for('main.index', bought=res.get("description"))) if res["status"] != "needs_pin" else redirect(url_for('main.index', needs_pin=res["user_id"]))
+
+    if res.get('status') == 'needs_pin':
+        return redirect(url_for('main.index', needs_pin=res.get('user_id')))
+
+    if res.get('status') == 'purchased':
+        return redirect(url_for('main.index', bought=res.get('description')))
+
+    # includes out_of_stock, not_found, etc (flash handles messaging)
+    return redirect(url_for('main.index'))
 
 
 @main.route('/scan', methods=['POST'])
