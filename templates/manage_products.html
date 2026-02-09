@@ -22,11 +22,11 @@
     {% endwith %}
     <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>UPC / PLU</th><th>Brand</th><th>Description</th><th>Price</th><th>Stock</th><th class="text-end px-4">Actions</th></tr></thead>
         <tbody>{% for p in products %}<tr>
-            <td><code>{{ p.upc_code }}</code></td><td>{{ p.manufacturer }}</td><td class="fw-bold">{{ p.description }}</td><td class="text-success fw-bold">${{ "%.2f"|format(p.price) }}</td>
+            <td><code>{{ p.upc_code }}</code></td><td>{{ p.manufacturer or '-' }}</td><td class="fw-bold">{{ p.description }}</td><td class="text-success fw-bold">${{ "%.2f"|format(p.price) }}</td>
             <td><span class="badge bg-light text-dark border">{{ p.stock_level }}</span></td>
             <td class="text-end px-4">
-                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm"  data-bs-toggle="modal" data-bs-target="#editModal" onclick='editProduct({{ p.to_dict() | tojson }})'><i class="fas fa-edit"></i></button>
-                <a href="{{ url_for('main.delete_product', upc=p.upc_code) }}" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
+                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#editModal" onclick='editProduct({{ p.to_dict() | tojson }})'><i class="fas fa-edit"></i></button>
+                <a href="{{ url_for('main.delete_product', upc=p.upc_code or 'UNKNOWN') }}" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
             </td>
         </tr>{% endfor %}</tbody></table></div></div>
 </div>
@@ -34,55 +34,33 @@
 <div class="modal fade" id="editModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="{{ url_for('main.save_product_manual') }}" method="POST" class="modal-content shadow-lg border-0" style="border-radius: 20px;">
     <div class="modal-header border-0 pb-0"><h5 class="fw-bold" id="modalTitle">Item Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
-        <div class="mb-3"><label class="form-label small fw-bold text-muted">UPC / PLU CODE</label><input type="text" name="upc_code" id="formUPC" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label small fw-bold text-muted">UPC / PLU CODE</label><input type="text" name="upc_code" id="formUPC" class="form-control" required onchange="lookupProductManual(this.value)"></div>
         <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted">CATEGORY</label><select name="category" id="formCat" class="form-select"><option value="Drinks">Drinks</option><option value="Snacks">Snacks</option><option value="Candy">Candy</option><option value="Frozen">Frozen</option><option value="Coffee Pods">Coffee Pods</option><option value="Sweepstake Tickets">Sweepstake Tickets</option></select></div><div class="col-6"><label class="form-label small fw-bold text-muted">PRICE ($)</label><input type="number" step="0.01" name="price" id="formPrice" class="form-control"></div></div>
         <div class="mb-3"><label class="form-label small fw-bold text-muted">BRAND</label><input type="text" name="manufacturer" id="formMfg" class="form-control"></div>
         <div class="mb-3"><label class="form-label small fw-bold text-muted">DESCRIPTION</label><input type="text" name="description" id="formDesc" class="form-control" required></div>
         <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted">SIZE</label><input type="text" name="size" id="formSize" class="form-control"></div><div class="col-6"><label class="form-label small fw-bold text-muted">STOCK</label><input type="number" name="stock_level" id="formStock" class="form-control"></div></div>
         <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_quick_item" id="formQuick"><label class="form-check-label small fw-bold" for="formQuick">Show on Kiosk</label></div>
-        <div class="version-tag mt-3">v1.1.0</div>
     </div>
     <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold">SAVE CHANGES</button></div>
 </form></div></div>
 
-<div class="version-tag">Manager v1.1.0</div>
+<div class="version-tag">Manager v1.3.4</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    function clearForm() {
-    const t = document.getElementById('modalTitle');
-    if (t) t.innerText = "Add New Item";
+    function clearForm() { const upc = document.getElementById('formUPC'); upc.value = ""; upc.readOnly = false; document.getElementById('modalTitle').innerText = "Add New Item"; document.getElementById('formDesc').value = ""; document.getElementById('formMfg').value = ""; document.getElementById('formSize').value = ""; document.getElementById('formPrice').value = "2.50"; document.getElementById('formStock').value = "0"; document.getElementById('formCat').value = "Snacks"; document.getElementById('formQuick').checked = true; }
+    
+    function editProduct(p) { try { if (typeof p === "string") p = JSON.parse(p); } catch (e) {} const upc = document.getElementById('formUPC'); upc.value = p?.upc_code ?? ""; upc.readOnly = true; document.getElementById('modalTitle').innerText = "Item Details"; document.getElementById('formCat').value = p?.category ?? "Snacks"; document.getElementById('formMfg').value = p?.manufacturer ?? ""; document.getElementById('formDesc').value = p?.description ?? ""; document.getElementById('formSize').value = p?.size ?? ""; document.getElementById('formPrice').value = (p?.price ?? ""); document.getElementById('formStock').value = (p?.stock_level ?? ""); document.getElementById('formQuick').checked = !!p?.is_quick_item; }
 
-    const upc = document.getElementById('formUPC');
-    if (upc) { upc.value = ""; upc.readOnly = false; }
-
-    const desc = document.getElementById('formDesc'); if (desc) desc.value = "";
-    const mfg  = document.getElementById('formMfg');  if (mfg)  mfg.value  = "";
-    const size = document.getElementById('formSize'); if (size) size.value = "";
-
-    const price = document.getElementById('formPrice'); if (price) price.value = "2.50";
-    const stock = document.getElementById('formStock'); if (stock) stock.value = "0";
-    const cat   = document.getElementById('formCat');   if (cat)   cat.value   = "Snacks";
-    const quick = document.getElementById('formQuick'); if (quick) quick.checked = true;
-}
-
-function editProduct(p) {
-    // If p arrives as a JSON string, parse it.
-    try { if (typeof p === "string") p = JSON.parse(p); } catch (e) {}
-
-    const t = document.getElementById('modalTitle');
-    if (t) t.innerText = "Item Details";
-
-    const upc = document.getElementById('formUPC');
-    if (upc) { upc.value = p?.upc_code ?? ""; upc.readOnly = true; }
-
-    const cat   = document.getElementById('formCat');   if (cat)   cat.value   = p?.category ?? "Snacks";
-    const mfg   = document.getElementById('formMfg');   if (mfg)   mfg.value   = p?.manufacturer ?? "";
-    const desc  = document.getElementById('formDesc');  if (desc)  desc.value  = p?.description ?? "";
-    const size  = document.getElementById('formSize');  if (size)  size.value  = p?.size ?? "";
-    const price = document.getElementById('formPrice'); if (price) price.value = (p?.price ?? "");
-    const stock = document.getElementById('formStock'); if (stock) stock.value = (p?.stock_level ?? "");
-    const quick = document.getElementById('formQuick'); if (quick) quick.checked = !!p?.is_quick_item;
-}
+    async function lookupProductManual(code) {
+        if (!code || document.getElementById('formUPC').readOnly) return;
+        const res = await fetch(`/admin/get-product/${code}`);
+        const data = await res.json();
+        if (data.found) {
+            document.getElementById('formMfg').value = data.mfg || "";
+            document.getElementById('formDesc').value = data.desc || "";
+            document.getElementById('formSize').value = data.size || "";
+        }
+    }
 </script>
 </body>
 </html>
