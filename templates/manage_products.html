@@ -9,10 +9,10 @@
 </head>
 <body>
 
-<nav class="navbar navbar-dark bg-dark mb-4">
+<nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/?open_admin=1"><i class="fas fa-arrow-left me-2"></i> Admin Switchboard</a>
-        <button class="btn btn-success btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#editModal" onclick="clearForm()"><i class="fas fa-plus me-1"></i> Add New Item</button>
+        <button class="btn btn-success btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#editModal" onclick="clearForm()"><i class="fas fa-plus me-1"></i> Add New Item</button>
     </div>
 </nav>
 
@@ -20,6 +20,7 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
+    
     <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>UPC / PLU</th><th>Brand</th><th>Description</th><th>Price</th><th>Stock</th><th class="text-end px-4">Actions</th></tr></thead>
         <tbody>{% for p in products %}<tr>
             <td><code>{{ p.upc_code }}</code></td><td>{{ p.manufacturer or '-' }}</td><td class="fw-bold">{{ p.description }}</td><td class="text-success fw-bold">${{ "%.2f"|format(p.price) }}</td>
@@ -44,23 +45,12 @@
     <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold">SAVE CHANGES</button></div>
 </form></div></div>
 
-<div class="version-tag">Manager v1.3.4</div>
+<div class="version-tag">Manager v1.3.5</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function clearForm() { const upc = document.getElementById('formUPC'); upc.value = ""; upc.readOnly = false; document.getElementById('modalTitle').innerText = "Add New Item"; document.getElementById('formDesc').value = ""; document.getElementById('formMfg').value = ""; document.getElementById('formSize').value = ""; document.getElementById('formPrice').value = "2.50"; document.getElementById('formStock').value = "0"; document.getElementById('formCat').value = "Snacks"; document.getElementById('formQuick').checked = true; }
-    
     function editProduct(p) { try { if (typeof p === "string") p = JSON.parse(p); } catch (e) {} const upc = document.getElementById('formUPC'); upc.value = p?.upc_code ?? ""; upc.readOnly = true; document.getElementById('modalTitle').innerText = "Item Details"; document.getElementById('formCat').value = p?.category ?? "Snacks"; document.getElementById('formMfg').value = p?.manufacturer ?? ""; document.getElementById('formDesc').value = p?.description ?? ""; document.getElementById('formSize').value = p?.size ?? ""; document.getElementById('formPrice').value = (p?.price ?? ""); document.getElementById('formStock').value = (p?.stock_level ?? ""); document.getElementById('formQuick').checked = !!p?.is_quick_item; }
-
-    async function lookupProductManual(code) {
-        if (!code || document.getElementById('formUPC').readOnly) return;
-        const res = await fetch(`/admin/get-product/${code}`);
-        const data = await res.json();
-        if (data.found) {
-            document.getElementById('formMfg').value = data.mfg || "";
-            document.getElementById('formDesc').value = data.desc || "";
-            document.getElementById('formSize').value = data.size || "";
-        }
-    }
+    async function lookupProductManual(code) { if (!code || document.getElementById('formUPC').readOnly) return; const res = await fetch(`/admin/get-product/${code}`); const data = await res.json(); if (data.found) { document.getElementById('formMfg').value = data.mfg || ""; document.getElementById('formDesc').value = data.desc || ""; document.getElementById('formSize').value = data.size || ""; } }
 </script>
 </body>
 </html>
