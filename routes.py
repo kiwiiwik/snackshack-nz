@@ -66,6 +66,15 @@ def nuke_transactions():
 
 @main.route('/admin/reset-balances')
 def reset_balances():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+
+    admin = Users.query.get(int(session['user_id']))
+    if admin and admin.is_admin:
+        Users.query.update({Users.balance: 0.00})
+        db.session.commit()
+        flash("All account balances reset to @main.route('/admin/reset-balances')
+def reset_balances():
     if 'user_id' not in session: return redirect(url_for('main.index'))
     admin = Users.query.get(int(session['user_id']))
     if admin and admin.is_admin:
@@ -92,6 +101,9 @@ def process_barcode(barcode):
             db.session.commit()
             return {"status": "purchased", "description": product.description}
     return {"status": "not_found"}
+.00.", "warning")
+
+    return redirect(url_for('main.index', open_admin=1))
 
 @main.route('/')
 def index():
@@ -124,12 +136,24 @@ def nuke_transactions():
 
 @main.route('/admin/reset-balances')
 def reset_balances():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+
+    admin = Users.query.get(int(session['user_id']))
+    if admin and admin.is_admin:
+        Users.query.update({Users.balance: 0.00})
+        db.session.commit()
+        flash("All account balances reset to @main.route('/admin/reset-balances')
+def reset_balances():
     if 'user_id' not in session: return redirect(url_for('main.index'))
     admin = Users.query.get(int(session['user_id']))
     if admin and admin.is_admin:
         Users.query.update({Users.balance: 0.00})
         db.session.commit()
         flash("All account balances reset to $0.00.", "warning")
+    return redirect(url_for('main.index', open_admin=1))
+.00.", "warning")
+
     return redirect(url_for('main.index', open_admin=1))
 
 @main.route('/admin/get-product/<barcode>')
@@ -217,8 +241,15 @@ def undo():
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
     res = process_barcode(barcode)
-    return redirect(url_for('main.index', bought=res.get("description"))) if res["status"] != "needs_pin" else redirect(url_for('main.index', needs_pin=res["user_id"]))
 
+    if res.get("status") == "needs_pin":
+        return redirect(url_for('main.index', needs_pin=res.get("user_id")))
+
+    if res.get("status") == "purchased":
+        return redirect(url_for('main.index', bought=res.get("description")))
+
+    # not_found / out_of_stock / etc
+    return redirect(url_for('main.index'))
 
 @main.route('/scan', methods=['POST'])
 def scan():
@@ -324,8 +355,15 @@ def undo():
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
     res = process_barcode(barcode)
-    return redirect(url_for('main.index', bought=res.get("description"))) if res["status"] != "needs_pin" else redirect(url_for('main.index', needs_pin=res["user_id"]))
 
+    if res.get("status") == "needs_pin":
+        return redirect(url_for('main.index', needs_pin=res.get("user_id")))
+
+    if res.get("status") == "purchased":
+        return redirect(url_for('main.index', bought=res.get("description")))
+
+    # not_found / out_of_stock / etc
+    return redirect(url_for('main.index'))
 
 @main.route('/scan', methods=['POST'])
 def scan():
