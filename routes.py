@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from models import db, Users, Products, Transactions
 from datetime import datetime
 from decimal import Decimal
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 main = Blueprint('main', __name__)
