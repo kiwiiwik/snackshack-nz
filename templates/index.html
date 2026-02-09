@@ -12,12 +12,11 @@
         .initial-avatar { width: 70px; height: 70px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.5rem; }
         .product-img { width: 100%; height: 100px; object-fit: contain; padding: 5px; }
         .price-text { color: #198754; font-weight: bold; font-size: 1rem; }
-        .switchboard-btn { height: 160px; border-radius: 25px; font-size: 1.4rem; font-weight: bold; transition: 0.2s; border: none; width: 100%; color: white; }
+        .switchboard-btn { height: 140px; border-radius: 20px; font-size: 1.2rem; font-weight: bold; transition: 0.2s; border: none; width: 100%; color: white; }
         .switchboard-btn:active { transform: scale(0.95); }
         .audit-btn-large { height: 110px; font-size: 1.2rem; font-weight: bold; border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; border: none; width: 100%; }
         .num-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         .num-btn { height: 60px; font-size: 1.3rem; font-weight: bold; border-radius: 10px; border: 1px solid #dee2e6; background: white; }
-        .num-btn:active { background: #e9ecef; }
         .field-label { font-size: 0.7rem; font-weight: bold; color: #6c757d; text-transform: uppercase; margin-bottom: 2px; }
         .fixed-transaction-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1030; }
         .recent-audit-item { font-size: 0.85rem; border-left: 4px solid #198754; background: #fdfdfd; padding: 8px; margin-bottom: 8px; border-radius: 0 8px 8px 0; }
@@ -28,7 +27,7 @@
 
 <nav class="navbar navbar-light bg-white shadow-sm mb-4">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/">&#129373; Snack Shack</a>
+        <a class="navbar-brand fw-bold" href="/">🥝 Snack Shack</a>
         {% if user %}
         <div class="d-flex align-items-center">
             {% if user.is_admin %}
@@ -44,17 +43,13 @@
 
 <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for cat, msg in messages %}
-                <div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>
-            {% endfor %}
-        {% endif %}
+        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
     {% if not user %}
         <h4 class="text-center mb-5 text-secondary">Select User</h4>
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4 mb-5">
-            {% for u in users %}<div class="col"><a href="{{ url_for('main.manual_add', barcode=u.card_id or '') }}" class="text-decoration-none text-dark"><div class="card h-100 p-4 user-tile text-center shadow-sm">{% if u.is_admin %}<i class="fas fa-shield-alt admin-badge"></i>{% endif %}<div class="initial-avatar">{{ u.first_name[0] }}</div><div class="fw-bold">{{ u.first_name }} {{ u.last_name }}</div></div></a></div>{% endfor %}
+            {% for u in users %}<div class="col"><a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark"><div class="card h-100 p-4 user-tile text-center shadow-sm">{% if u.is_admin %}<i class="fas fa-shield-alt admin-badge"></i>{% endif %}<div class="initial-avatar">{{ u.first_name[0] }}</div><div class="fw-bold">{{ u.first_name }} {{ u.last_name }}</div></div></a></div>{% endfor %}
         </div>
     {% else %}
         <ul class="nav nav-pills mb-4 justify-content-center" id="pills-tab" role="tablist">
@@ -65,27 +60,7 @@
         <div class="tab-content">
             {% for category, items in grouped_products.items() %}
             <div class="tab-pane fade {{ 'show active' if loop.first }}" id="cat-{{ loop.index }}"><div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-4">
-                {% for p in items %}
-  <div class="col">
-    {% if p.stock_level <= 0 %}
-      <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile opacity-50" style="pointer-events:none;">
-        <span class="badge bg-light text-dark border mb-2">0 left</span>
-        <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';">
-        <div class="fw-bold small">{{ p.description }}</div>
-        <div class="price-text">${{ "%.2f"|format(p.price) }}</div>
-      </div>
-    {% else %}
-      <a href="{{ url_for('main.manual_add', barcode=p.upc_code) }}" class="text-decoration-none text-dark">
-        <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile">
-          <span class="badge bg-light text-dark border mb-2">{{ p.stock_level }} left</span>
-          <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';">
-          <div class="fw-bold small">{{ p.description }}</div>
-          <div class="price-text">${{ "%.2f"|format(p.price) }}</div>
-        </div>
-      </a>
-    {% endif %}
-  </div>
-{% endfor %}
+                {% for p in items %}<div class="col"><a href="{{ url_for('main.manual_add', barcode=p.upc_code) }}" class="text-decoration-none text-dark"><div class="card h-100 text-center border-0 shadow-sm p-3 user-tile"><span class="badge bg-light text-dark border mb-2">{{ p.stock_level }} left</span><img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';"><div class="fw-bold small">{{ p.description }}</div><div class="price-text">${{ "%.2f"|format(p.price) }}</div></div></a></div>{% endfor %}
             </div></div>
             {% endfor %}
         </div>
@@ -107,20 +82,18 @@
         <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">
             <div class="modal-body p-5 text-center">
                 <h2 class="fw-bold mb-5 text-dark">Admin Switchboard</h2>
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6"><button class="switchboard-btn bg-danger shadow" data-bs-toggle="modal" data-bs-target="#auditModal" data-bs-dismiss="modal"><i class="fas fa-clipboard-check mb-3 fa-2x"></i><br>AUDIT STATION</button></div>
-                    <div class="col-md-6"><a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center shadow text-decoration-none"><i class="fas fa-boxes mb-3 fa-2x"></i><br>PRODUCT MANAGER</a></div>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4"><button class="switchboard-btn bg-danger shadow" data-bs-toggle="modal" data-bs-target="#auditModal" data-bs-dismiss="modal"><i class="fas fa-clipboard-check mb-2 fa-2x"></i><br>AUDIT</button></div>
+                    <div class="col-md-4"><a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center shadow text-decoration-none"><i class="fas fa-boxes mb-2 fa-2x"></i><br>PRODUCTS</a></div>
+                    <div class="col-md-4"><a href="{{ url_for('main.manage_users') }}" class="btn switchboard-btn bg-primary d-flex flex-column align-items-center justify-content-center shadow text-decoration-none"><i class="fas fa-users mb-2 fa-2x"></i><br>STAFF</a></div>
                 </div>
-                <div class="border-top pt-4 mt-4">
-                    <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <a href="{{ url_for('main.clear_audit_history') }}" class="btn btn-sm btn-outline-secondary">Reset Audit List</a>
+                <div class="border-top pt-4 mt-4 text-center">
+                    <div class="d-flex justify-content-center gap-3">
                         <a href="{{ url_for('main.reset_balances') }}" class="btn btn-sm btn-outline-warning fw-bold" onclick="return confirm('Reset all balances to $0.00?')">Reset Balances</a>
-            <a href="{{ url_for('main.monthly_report') }}" class="btn btn-sm btn-outline-primary fw-bold">Monthly Report</a>
-
-                        <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('NUKE ALL TRANSACTIONS? (History will be gone)')">NUKE DATABASE</a>
+                        <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('NUKE ALL TRANSACTIONS?')">NUKE HISTORY</a>
                     </div>
                 </div>
-                <div class="version-tag">v1.1.0</div>
+                <div class="version-tag">v1.2.5</div>
             </div>
         </div>
     </div>
@@ -134,7 +107,6 @@
                 <div class="row g-4">
                     <div class="col-md-3">
                         <button onclick="focusScanField()" class="audit-btn-large bg-danger mb-2 shadow"><i class="fas fa-barcode"></i> Scan Barcode</button>
-                        <button onclick="generatePLU()" class="audit-btn-large bg-secondary mb-4 shadow"><i class="fas fa-plus-circle"></i> No Barcode?</button>
                         <div class="num-pad bg-light p-3 rounded">
                             <button class="num-btn shadow-sm" onclick="numPress('1')">1</button><button class="num-btn shadow-sm" onclick="numPress('2')">2</button><button class="num-btn shadow-sm" onclick="numPress('3')">3</button>
                             <button class="num-btn shadow-sm" onclick="numPress('4')">4</button><button class="num-btn shadow-sm" onclick="numPress('5')">5</button><button class="num-btn shadow-sm" onclick="numPress('6')">6</button>
@@ -165,54 +137,18 @@
                         </div>
                     </div>
                 </div>
-                <div class="version-tag">v1.1.0</div>
             </div>
         </div>
     </div>
 </div>
 {% endif %}
 
-<div style="display: none;"><form action="{{ url_for('main.scan') }}" method="POST"><input type="text" name="barcode" id="barcode" autofocus autocomplete="off"></form></div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    let currentField = "auditNumPacks";
-    // --- Remember active product tab across page loads/redirects (per-user) ---
-    const userId = "{{ user.user_id if user else 'anon' }}";
-    const tabKeyTarget = 'activeSnackTabTarget:' + userId;
-    const tabKeyLabel  = 'activeSnackTabLabel:'  + userId;
-
-    document.addEventListener('shown.bs.tab', function (e) {
-        const btn = e.target;
-        if (!btn) return;
-        const target = btn.getAttribute('data-bs-target');
-        const label = (btn.textContent || '').trim();
-        if (target) localStorage.setItem(tabKeyTarget, target);
-        if (label)  localStorage.setItem(tabKeyLabel,  label);
-    });
-
-    window.addEventListener('DOMContentLoaded', function () {
-        const savedTarget = localStorage.getItem(tabKeyTarget);
-        const savedLabel  = localStorage.getItem(tabKeyLabel);
-
-        let btn = null;
-
-        if (savedTarget) {
-            btn = document.querySelector('#pills-tab button[data-bs-target="' + savedTarget + '"]');
-        }
-        if (!btn && savedLabel) {
-            const buttons = document.querySelectorAll('#pills-tab button[data-bs-toggle="pill"]');
-            btn = Array.from(buttons).find(b => (b.textContent || '').trim() === savedLabel) || null;
-        }
-
-        if (btn && window.bootstrap) {
-            bootstrap.Tab.getOrCreateInstance(btn).show();
-        }
-    });
-window.onload = () => { if (new URLSearchParams(window.location.search).get('open_admin')) { new bootstrap.Modal(document.getElementById('switchboardModal')).show(); } };
+    let currentField = "auditNumPacks"; 
+    window.onload = () => { if (new URLSearchParams(window.location.search).get('open_admin')) { new bootstrap.Modal(document.getElementById('switchboardModal')).show(); } };
     function setFocus(id) { currentField = id; }
     function focusScanField() { const bc = document.getElementById('auditBarcode'); bc.value = ""; bc.focus(); }
-    function generatePLU() { document.getElementById('auditBarcode').value = "PLU-" + Math.floor(1000 + Math.random() * 9999); resetCounts(); }
     async function lookupProduct(code) {
         const res = await fetch(`/admin/get-product/${code}`);
         const data = await res.json();
@@ -225,9 +161,8 @@ window.onload = () => { if (new URLSearchParams(window.location.search).get('ope
             currentField = "auditNumPacks"; document.getElementById('auditNumPacks').focus(); calcTotal();
         }
     }
-    function resetCounts() { document.getElementById('auditPackQty').value = "1"; document.getElementById('auditNumPacks').value = ""; document.getElementById('auditDisplayTotal').innerText = "0"; }
     function numPress(val) {
-        if (val === 'C') { resetCounts(); return; }
+        if (val === 'C') { document.getElementById('auditPackQty').value = "1"; document.getElementById('auditNumPacks').value = ""; document.getElementById('auditDisplayTotal').innerText = "0"; return; }
         if (val === '*') { currentField = "auditPackQty"; document.getElementById('auditPackQty').value = ""; return; }
         document.getElementById(currentField).value += val; calcTotal();
     }
@@ -237,6 +172,6 @@ window.onload = () => { if (new URLSearchParams(window.location.search).get('ope
         document.getElementById('auditFinalCount').value = total;
     }
 </script>
-<div class="version-tag">Main Kiosk v1.1.0</div>
+<div class="version-tag">Kiosk v1.2.5</div>
 </body>
 </html>

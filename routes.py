@@ -11,7 +11,8 @@ from sqlalchemy.exc import IntegrityError
 main = Blueprint('main', __name__)
 
 def process_barcode(barcode):
-    barcode = barcode.strip()
+    if not barcode: return {"status": "not_found"}
+    barcode = str(barcode).strip()
     user = Users.query.filter_by(card_id=barcode).first()
     if user:
         if user.pin: return {"status": "needs_pin", "user_id": user.user_id}
@@ -22,11 +23,9 @@ def process_barcode(barcode):
     if 'user_id' in session:
         product = Products.query.filter_by(upc_code=barcode).first()
         if product:
-            # Hard stop: do not allow purchase when stock is zero (covers direct URL + scan)
             if product.stock_level is not None and product.stock_level <= 0:
                 flash(f"Out of stock: {product.description}", "warning")
-                return {"status": "out_of_stock", "description": product.description}
-
+                return {"status": "out_of_stock"}
             u = Users.query.get(int(session['user_id']))
             price = Decimal(str(product.price or 0.0))
             u.balance = Decimal(str(u.balance or 0.0)) - price
@@ -40,6 +39,9 @@ def process_barcode(barcode):
 def index():
     current_user = None
     all_staff, recent_audits = None, None
+    needs_pin = request.args.get('needs_pin')
+    pin_user = Users.query.get(int(needs_pin)) if needs_pin else None
+
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
         if current_user and current_user.is_admin:
@@ -53,7 +55,54 @@ def index():
         cat = p.category if p.category in grouped else "Snacks"
         grouped[cat].append(p)
     
-    return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, recent_audits=recent_audits, just_bought=request.args.get('bought'))
+    return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, recent_audits=recent_audits, just_bought=request.args.get('bought'), needs_pin=needs_pin, pin_user=pin_user)
+
+@main.route('/admin/users')
+def manage_users():
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    admin = Users.query.get(int(session['user_id']))
+    if not admin or not admin.is_admin: return redirect(url_for('main.index'))
+    all_users = Users.query.order_by(Users.last_name).all()
+    return render_template('manage_users.html', users=all_users)
+
+@main.route('/admin/user/save', methods=['POST'])
+def save_user():
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    uid = request.form.get('user_id')
+    card_id = request.form.get('card_id').strip()
+    
+    if uid:
+        user = Users.query.get(int(uid))
+    else:
+        user = Users(card_id=card_id)
+        db.session.add(user)
+    
+    user.first_name = request.form.get('first_name')
+    user.last_name = request.form.get('last_name')
+    user.email = request.form.get('email')
+    user.is_admin = 'is_admin' in request.form
+    
+    db.session.commit()
+    flash(f"User {user.first_name} saved.", "success")
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/user/delete/<int:user_id>')
+def delete_user(user_id):
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    if int(session['user_id']) == user_id:
+        flash("You cannot delete your own admin account!", "danger")
+        return redirect(url_for('main.manage_users'))
+    
+    user = Users.query.get(user_id)
+    if user:
+        try:
+            db.session.delete(user)
+            db.session.commit()
+            flash("User removed.", "info")
+        except IntegrityError:
+            db.session.rollback()
+            flash("Cannot delete user with transaction history. Recommend clearing their Card ID instead.", "danger")
+    return redirect(url_for('main.manage_users'))
 
 @main.route('/admin/nuke-transactions')
 def nuke_transactions():
@@ -112,101 +161,6 @@ def clear_audit_history():
     db.session.commit()
     return redirect(url_for('main.index', open_admin=1))
 
-
-
-@main.route('/admin/monthly_report')
-def monthly_report():
-    # Admin only
-    uid = session.get('user_id')
-    if not uid:
-        flash("Please log in.", "warning")
-        return redirect(url_for('main.index'))
-
-    current_user = Users.query.get(int(uid))
-    if not current_user or not current_user.is_admin:
-        flash("Admin access required.", "danger")
-        return redirect(url_for('main.index'))
-
-    # month query param expects YYYY-MM. Default is last calendar month (UTC).
-    ym = request.args.get('month', '').strip()
-    today = datetime.utcnow().date()
-    if not ym:
-        if today.month == 1:
-            year, month = today.year - 1, 12
-        else:
-            year, month = today.year, today.month - 1
-        ym = f"{year:04d}-{month:02d}"
-    try:
-        year = int(ym.split('-')[0])
-        month = int(ym.split('-')[1])
-        if month < 1 or month > 12:
-            raise ValueError("month out of range")
-    except Exception:
-        flash("Invalid month. Use YYYY-MM.", "warning")
-        return redirect(url_for('main.monthly_report'))
-
-    start_dt = datetime(year, month, 1)
-    # first day of next month
-    if month == 12:
-        end_dt = datetime(year + 1, 1, 1)
-    else:
-        end_dt = datetime(year, month + 1, 1)
-
-    # Pull all transactions in the selected month
-    tx_rows = (
-        db.session.query(Transactions, Products)
-        .outerjoin(Products, Products.upc_code == Transactions.upc_code)
-        .filter(Transactions.transaction_date >= start_dt, Transactions.transaction_date < end_dt)
-        .order_by(Transactions.user_id.asc(), Transactions.transaction_date.asc())
-        .all()
-    )
-
-    tx_by_user = {}
-    spent_by_user = {}
-    for t, p in tx_rows:
-        tx_by_user.setdefault(t.user_id, []).append({
-            "when": t.transaction_date.strftime("%Y-%m-%d %H:%M"),
-            "desc": (p.description if p else t.upc_code),
-            "amount": float(t.amount or 0),
-        })
-        spent_by_user[t.user_id] = spent_by_user.get(t.user_id, Decimal("0.00")) + (t.amount or Decimal("0.00"))
-
-    # Sum of purchases AFTER month end, used to reconstruct balances at month-end:
-    # end_balance(month) = current_balance + sum(purchases after month_end)
-    post_sums = dict(
-        db.session.query(Transactions.user_id, func.sum(Transactions.amount))
-        .filter(Transactions.transaction_date >= end_dt)
-        .group_by(Transactions.user_id)
-        .all()
-    )
-
-    users = Users.query.order_by(Users.last_name.asc(), Users.first_name.asc()).all()
-    rows = []
-    for u in users:
-        current_bal = Decimal(str(u.balance or 0))
-        post = Decimal(str(post_sums.get(u.user_id) or 0))
-        spent = Decimal(str(spent_by_user.get(u.user_id) or 0))
-        end_balance = current_bal + post
-        start_balance = end_balance + spent
-
-        rows.append({
-            "user": u,
-            "start_balance": float(start_balance),
-            "end_balance": float(end_balance),
-            "spent": float(spent),
-            "txs": tx_by_user.get(u.user_id, []),
-        })
-
-    month_label = start_dt.strftime("%B %Y")
-    return render_template(
-        "monthly_report.html",
-        rows=rows,
-        selected_month=ym,
-        month_label=month_label,
-        start_iso=start_dt.strftime("%Y-%m-%d"),
-        end_iso=end_dt.strftime("%Y-%m-%d"),
-    )
-
 @main.route('/admin/products')
 def manage_products():
     if 'user_id' not in session: return redirect(url_for('main.index'))
@@ -235,7 +189,7 @@ def delete_product(upc):
             flash("Item deleted.", "info")
         except IntegrityError:
             db.session.rollback()
-            flash(f"Constraint Conflict: '{product.description}' is linked to historical sales. Set stock to 0 instead or use NUKE.", "danger")
+            flash("Delete failed: item has history.", "danger")
     return redirect(url_for('main.manage_products'))
 
 @main.route('/undo')
@@ -255,29 +209,7 @@ def undo():
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
     res = process_barcode(barcode)
-
-    if res.get('status') == 'needs_pin':
-        return redirect(url_for('main.index', needs_pin=res.get('user_id')))
-
-    if res.get('status') == 'purchased':
-        return redirect(url_for('main.index', bought=res.get('description')))
-
-    # includes out_of_stock, not_found, etc (flash handles messaging)
-    return redirect(url_for('main.index'))
-
-
-@main.route('/scan', methods=['POST'])
-def scan():
-    barcode = request.form.get('barcode', '').strip()
-    res = process_barcode(barcode)
-
-    if res.get('status') == 'needs_pin':
-        return redirect(url_for('main.index', needs_pin=res.get('user_id')))
-
-    if res.get('status') == 'purchased':
-        return redirect(url_for('main.index', bought=res.get('description')))
-
-    return redirect(url_for('main.index'))
+    return redirect(url_for('main.index', bought=res.get("description"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
 
 @main.route('/logout')
 def logout():
