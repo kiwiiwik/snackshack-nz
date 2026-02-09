@@ -28,7 +28,7 @@
 
 <nav class="navbar navbar-light bg-white shadow-sm mb-4">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/">&#129373; Snack Shack</a>
+        <a class="navbar-brand fw-bold" href="/">ðŸ¥ Snack Shack</a>
         {% if user %}
         <div class="d-flex align-items-center">
             {% if user.is_admin %}
@@ -65,27 +65,7 @@
         <div class="tab-content">
             {% for category, items in grouped_products.items() %}
             <div class="tab-pane fade {{ 'show active' if loop.first }}" id="cat-{{ loop.index }}"><div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3 mb-4">
-                {% for p in items %}
-  <div class="col">
-    {% if p.stock_level <= 0 %}
-      <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile opacity-50">
-        <span class="badge bg-light text-dark border mb-2">0 left</span>
-        <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';">
-        <div class="fw-bold small">{{ p.description }}</div>
-        <div class="price-text">${{ "%.2f"|format(p.price) }}</div>
-      </div>
-    {% else %}
-      <a href="{{ url_for('main.manual_add', barcode=p.upc_code) }}" class="text-decoration-none text-dark">
-        <div class="card h-100 text-center border-0 shadow-sm p-3 user-tile">
-          <span class="badge bg-light text-dark border mb-2">{{ p.stock_level }} left</span>
-          <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';">
-          <div class="fw-bold small">{{ p.description }}</div>
-          <div class="price-text">${{ "%.2f"|format(p.price) }}</div>
-        </div>
-      </a>
-    {% endif %}
-  </div>
-{% endfor %}
+                {% for p in items %}<div class="col"><a href="{{ url_for('main.manual_add', barcode=p.upc_code) }}" class="text-decoration-none text-dark"><div class="card h-100 text-center border-0 shadow-sm p-3 user-tile"><span class="badge bg-light text-dark border mb-2">{{ p.stock_level }} left</span><img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img mb-2" onerror="this.src='/static/images/placeholder.png';"><div class="fw-bold small">{{ p.description }}</div><div class="price-text">${{ "%.2f"|format(p.price) }}</div></div></a></div>{% endfor %}
             </div></div>
             {% endfor %}
         </div>
@@ -175,26 +155,6 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     let currentField = "auditNumPacks";
-    // --- Remember active product tab across page loads/redirects ---
-    const userId = "{{ user.user_id if user else 'anon' }}";
-    const tabKey = "activeSnackTab:" + userId;
-
-    document.addEventListener("shown.bs.tab", function (e) {
-        const btn = e.target;
-        if (!btn) return;
-        const target = btn.getAttribute("data-bs-target");
-        if (target) localStorage.setItem(tabKey, target);
-    });
-
-    window.addEventListener("DOMContentLoaded", function () {
-        const savedTarget = localStorage.getItem(tabKey);
-        if (!savedTarget) return;
-
-        const btn = document.querySelector('#pills-tab button[data-bs-target="' + savedTarget + '"]');
-        if (btn && window.bootstrap) {
-            bootstrap.Tab.getOrCreateInstance(btn).show();
-        }
-    });
     // --- Remember active product tab across page loads/redirects (per-user) ---
     const userId = "{{ user.user_id if user else 'anon' }}";
     const tabKeyTarget = 'activeSnackTabTarget:' + userId;
