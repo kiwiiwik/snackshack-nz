@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monthly Report</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .wrap { max-width: 1100px; }
+    .mono { font-variant-numeric: tabular-nums; }
+    .small-muted { font-size: 0.9rem; color: #6c757d; }
+    details > summary { cursor: pointer; }
+  </style>
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-light bg-white shadow-sm mb-4">
+    <div class="container wrap">
+      <a class="navbar-brand fw-bold" href="/">&#129373; Snack Shack</a>
+      <a class="btn btn-sm btn-outline-secondary" href="/">Back</a>
+    </div>
+  </nav>
+
+  <div class="container wrap">
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+      <div>
+        <h2 class="mb-0">Monthly Report</h2>
+        <div class="small-muted">Balances are reconstructed from current balance and transaction history.</div>
+      </div>
+
+      <form class="d-flex align-items-end gap-2" method="GET" action="{{ url_for('main.monthly_report') }}">
+        <div>
+          <label class="form-label mb-1 small-muted">Month</label>
+          <input class="form-control" type="month" name="month" value="{{ selected_month }}">
+        </div>
+        <button class="btn btn-primary" type="submit">Run</button>
+      </form>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+          <div class="fw-bold">{{ month_label }}</div>
+          <div class="small-muted">Showing purchases from {{ start_iso }} to {{ end_iso }} (exclusive)</div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th class="text-end">Starting balance</th>
+                <th class="text-end">Spent</th>
+                <th class="text-end">Ending balance</th>
+                <th class="text-end">Purchases</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+              <tr>
+                <td class="fw-semibold">{{ row.user.first_name }} {{ row.user.last_name }}</td>
+                <td class="text-end mono">${{ "%.2f"|format(row.start_balance) }}</td>
+                <td class="text-end mono">${{ "%.2f"|format(row.spent) }}</td>
+                <td class="text-end mono">${{ "%.2f"|format(row.end_balance) }}</td>
+                <td class="text-end">
+                  {% if row.txs and row.txs|length > 0 %}
+                    <details class="text-start">
+                      <summary class="small-muted">{{ row.txs|length }} item(s)</summary>
+                      <ul class="mt-2 mb-0">
+                        {% for t in row.txs %}
+                          <li class="small">
+                            <span class="small-muted">{{ t.when }}</span>
+                            — {{ t.desc }}
+                            <span class="mono">(${{ "%.2f"|format(t.amount) }})</span>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    </details>
+                  {% else %}
+                    <span class="small-muted">0</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

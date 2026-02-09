@@ -111,6 +111,101 @@ def clear_audit_history():
     db.session.commit()
     return redirect(url_for('main.index', open_admin=1))
 
+
+
+@main.route('/admin/monthly_report')
+def monthly_report():
+    # Admin only
+    uid = session.get('user_id')
+    if not uid:
+        flash("Please log in.", "warning")
+        return redirect(url_for('main.index'))
+
+    current_user = Users.query.get(int(uid))
+    if not current_user or not current_user.is_admin:
+        flash("Admin access required.", "danger")
+        return redirect(url_for('main.index'))
+
+    # month query param expects YYYY-MM. Default is last calendar month (UTC).
+    ym = request.args.get('month', '').strip()
+    today = datetime.utcnow().date()
+    if not ym:
+        if today.month == 1:
+            year, month = today.year - 1, 12
+        else:
+            year, month = today.year, today.month - 1
+        ym = f"{year:04d}-{month:02d}"
+    try:
+        year = int(ym.split('-')[0])
+        month = int(ym.split('-')[1])
+        if month < 1 or month > 12:
+            raise ValueError("month out of range")
+    except Exception:
+        flash("Invalid month. Use YYYY-MM.", "warning")
+        return redirect(url_for('main.monthly_report'))
+
+    start_dt = datetime(year, month, 1)
+    # first day of next month
+    if month == 12:
+        end_dt = datetime(year + 1, 1, 1)
+    else:
+        end_dt = datetime(year, month + 1, 1)
+
+    # Pull all transactions in the selected month
+    tx_rows = (
+        db.session.query(Transactions, Products)
+        .outerjoin(Products, Products.upc_code == Transactions.upc_code)
+        .filter(Transactions.transaction_date >= start_dt, Transactions.transaction_date < end_dt)
+        .order_by(Transactions.user_id.asc(), Transactions.transaction_date.asc())
+        .all()
+    )
+
+    tx_by_user = {}
+    spent_by_user = {}
+    for t, p in tx_rows:
+        tx_by_user.setdefault(t.user_id, []).append({
+            "when": t.transaction_date.strftime("%Y-%m-%d %H:%M"),
+            "desc": (p.description if p else t.upc_code),
+            "amount": float(t.amount or 0),
+        })
+        spent_by_user[t.user_id] = spent_by_user.get(t.user_id, Decimal("0.00")) + (t.amount or Decimal("0.00"))
+
+    # Sum of purchases AFTER month end, used to reconstruct balances at month-end:
+    # end_balance(month) = current_balance + sum(purchases after month_end)
+    post_sums = dict(
+        db.session.query(Transactions.user_id, func.sum(Transactions.amount))
+        .filter(Transactions.transaction_date >= end_dt)
+        .group_by(Transactions.user_id)
+        .all()
+    )
+
+    users = Users.query.order_by(Users.last_name.asc(), Users.first_name.asc()).all()
+    rows = []
+    for u in users:
+        current_bal = Decimal(str(u.balance or 0))
+        post = Decimal(str(post_sums.get(u.user_id) or 0))
+        spent = Decimal(str(spent_by_user.get(u.user_id) or 0))
+        end_balance = current_bal + post
+        start_balance = end_balance + spent
+
+        rows.append({
+            "user": u,
+            "start_balance": float(start_balance),
+            "end_balance": float(end_balance),
+            "spent": float(spent),
+            "txs": tx_by_user.get(u.user_id, []),
+        })
+
+    month_label = start_dt.strftime("%B %Y")
+    return render_template(
+        "monthly_report.html",
+        rows=rows,
+        selected_month=ym,
+        month_label=month_label,
+        start_iso=start_dt.strftime("%Y-%m-%d"),
+        end_iso=end_dt.strftime("%Y-%m-%d"),
+    )
+
 @main.route('/admin/products')
 def manage_products():
     if 'user_id' not in session: return redirect(url_for('main.index'))
