@@ -62,35 +62,6 @@ def select_user(user_id):
         db.session.commit()
     return redirect(url_for('main.index'))
 
-@main.route('/admin/user/payment', methods=['POST'])
-def record_payment():
-    uid, amount = request.form.get('user_id'), Decimal(request.form.get('amount', '0.00'))
-    user = Users.query.get(int(uid))
-    if user:
-        user.balance = Decimal(str(user.balance or 0.0)) + amount
-        pay_prod = Products.query.get('PAYMENT') or Products(upc_code='PAYMENT', description='Account Payment', price=0, stock_level=0, category='System')
-        if not Products.query.get('PAYMENT'): db.session.add(pay_prod)
-        db.session.add(Transactions(user_id=user.user_id, upc_code='PAYMENT', amount=-amount))
-        db.session.commit()
-        flash(f"Payment recorded for {user.first_name}", "success")
-    return redirect(url_for('main.manage_users'))
-
-@main.route('/admin/users')
-def manage_users():
-    if 'user_id' not in session: return redirect(url_for('main.index'))
-    return render_template('manage_users.html', users=Users.query.order_by(Users.last_name).all())
-
-@main.route('/admin/product/save', methods=['POST'])
-def save_product_manual():
-    upc = request.form.get('upc_code', '').strip()
-    p = Products.query.get(upc) or Products(upc_code=upc)
-    if not Products.query.get(upc): db.session.add(p)
-    p.manufacturer, p.description, p.size = request.form.get('manufacturer'), request.form.get('description'), request.form.get('size')
-    p.price, p.category, p.stock_level = Decimal(request.form.get('price', '0.00')), request.form.get('category'), int(request.form.get('stock_level', 0))
-    p.is_quick_item = 'is_quick_item' in request.form
-    db.session.commit()
-    return redirect(url_for('main.manage_products'))
-
 @main.route('/pin_verify', methods=['POST'])
 def pin_verify():
     uid, pin = request.form.get('user_id'), request.form.get('pin', '').strip()
@@ -116,6 +87,65 @@ def pin_clear():
         if u: u.pin = None; db.session.commit(); flash("PIN removed.", "info")
     return redirect(url_for('main.index'))
 
+@main.route('/admin/user/payment', methods=['POST'])
+def record_payment():
+    uid, amount = request.form.get('user_id'), Decimal(request.form.get('amount', '0.00'))
+    user = Users.query.get(int(uid))
+    if user:
+        user.balance = Decimal(str(user.balance or 0.0)) + amount
+        pay_prod = Products.query.get('PAYMENT') or Products(upc_code='PAYMENT', description='Account Payment', price=0, stock_level=0, category='System')
+        if not Products.query.get('PAYMENT'): db.session.add(pay_prod)
+        db.session.add(Transactions(user_id=user.user_id, upc_code='PAYMENT', amount=-amount))
+        db.session.commit()
+        flash(f"Payment recorded for {user.first_name}", "success")
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/users')
+def manage_users():
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    return render_template('manage_users.html', users=Users.query.order_by(Users.last_name).all())
+
+@main.route('/admin/user/save', methods=['POST'])
+def save_user():
+    uid = request.form.get('user_id')
+    user = Users.query.get(int(uid)) if uid else Users(card_id=request.form.get('card_id', '').strip())
+    if not uid: db.session.add(user)
+    user.first_name, user.last_name, user.email = request.form.get('first_name'), request.form.get('last_name'), request.form.get('email')
+    user.is_admin = 'is_admin' in request.form
+    db.session.commit()
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/user/delete/<int:user_id>')
+def delete_user(user_id):
+    user = Users.query.get(user_id)
+    if user and int(session.get('user_id')) != user_id:
+        try:
+            db.session.delete(user); db.session.commit()
+        except IntegrityError:
+            db.session.rollback(); flash("User has history; delete failed.", "danger")
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/product/save', methods=['POST'])
+def save_product_manual():
+    upc = request.form.get('upc_code', '').strip()
+    p = Products.query.get(upc) or Products(upc_code=upc)
+    if not Products.query.get(upc): db.session.add(p)
+    p.manufacturer, p.description, p.size = request.form.get('manufacturer'), request.form.get('description'), request.form.get('size')
+    p.price, p.category, p.stock_level = Decimal(request.form.get('price', '0.00')), request.form.get('category'), int(request.form.get('stock_level', 0))
+    p.is_quick_item = 'is_quick_item' in request.form
+    db.session.commit()
+    return redirect(url_for('main.manage_products'))
+
+@main.route('/admin/product/delete/<upc>')
+def delete_product(upc):
+    p = Products.query.get(upc)
+    if p:
+        try:
+            db.session.delete(p); db.session.commit()
+        except IntegrityError:
+            db.session.rollback(); flash("Item has sales history; delete blocked.", "danger")
+    return redirect(url_for('main.manage_products'))
+
 @main.route('/manual/')
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
@@ -126,15 +156,38 @@ def manual_add(barcode=None):
 def logout():
     session.pop('user_id', None); return redirect(url_for('main.index'))
 
-@main.route('/admin/nuke-transactions')
-def nuke_transactions():
-    Transactions.query.delete(); db.session.commit(); flash("HISTORY NUKED.", "danger")
+@main.route('/scan', methods=['POST'])
+def scan():
+    res = process_barcode(request.form.get('barcode', '').strip())
+    return redirect(url_for('main.index', bought=res.get('description'))) if res.get('status') == 'purchased' else redirect(url_for('main.index'))
+
+@main.route('/admin/get-product/<barcode>')
+def get_product(barcode):
+    p = Products.query.get(barcode.strip())
+    if p: return jsonify({"found": True, "mfg": p.manufacturer, "desc": p.description, "size": p.size, "price": str(p.price), "cat": p.category, "soh": p.stock_level})
+    try:
+        res = requests.get(f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json", timeout=5)
+        if res.status_code == 200:
+            d = res.json()
+            if d.get("status") == 1:
+                prod = d.get("product", {})
+                return jsonify({"found": True, "mfg": prod.get("brands", ""), "desc": prod.get("product_name", ""), "size": prod.get("quantity", ""), "soh": 0})
+    except: pass
+    return jsonify({"found": False})
+
+@main.route('/admin/audit-submit', methods=['POST'])
+def audit_submit():
+    barcode = request.form.get('barcode', '').strip()
+    product = Products.query.get(barcode) or Products(upc_code=barcode)
+    if not Products.query.get(barcode): db.session.add(product)
+    product.manufacturer, product.description = request.form.get('manufacturer'), request.form.get('description')
+    product.stock_level, product.last_audited = int(request.form.get('final_count', 0)), datetime.utcnow()
+    db.session.commit()
     return redirect(url_for('main.index', open_admin=1))
 
-@main.route('/admin/reset-balances')
-def reset_balances():
-    Users.query.update({Users.balance: 0.00}); db.session.commit(); flash("Balances reset.", "warning")
-    return redirect(url_for('main.index', open_admin=1))
+@main.route('/admin/products')
+def manage_products():
+    return render_template('manage_products.html', products=Products.query.order_by(Products.description).all())
 
 @main.route('/admin/monthly_report')
 def monthly_report():
@@ -151,22 +204,24 @@ def monthly_report():
         rows.append({"user": u, "spent": spent, "start_balance": 0, "end_balance": float(u.balance), "txs": tx_by_user.get(u.user_id, [])})
     return render_template("monthly_report.html", rows=rows, selected_month=ym, month_label=start_dt.strftime("%B %Y"), start_iso=start_dt.strftime("%Y-%m-%d"), end_iso=end_dt.strftime("%Y-%m-%d"))
 
-@main.route('/admin/get-product/<barcode>')
-def get_product(barcode):
-    p = Products.query.get(barcode.strip())
-    if p: return jsonify({"found": True, "mfg": p.manufacturer, "desc": p.description, "size": p.size, "price": str(p.price), "cat": p.category, "soh": p.stock_level})
-    return jsonify({"found": False})
+@main.route('/undo')
+def undo():
+    uid = session.get('user_id')
+    if uid:
+        lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
+        if lt:
+            u, p = Users.query.get(uid), Products.query.get(lt.upc_code)
+            u.balance += lt.amount
+            if p and lt.amount > 0: p.stock_level += 1
+            db.session.delete(lt); db.session.commit()
+    return redirect(url_for('main.index'))
 
-@main.route('/admin/audit-submit', methods=['POST'])
-def audit_submit():
-    barcode = request.form.get('barcode', '').strip()
-    product = Products.query.get(barcode) or Products(upc_code=barcode)
-    if not Products.query.get(barcode): db.session.add(product)
-    product.manufacturer, product.description = request.form.get('manufacturer'), request.form.get('description')
-    product.stock_level, product.last_audited = int(request.form.get('final_count', 0)), datetime.utcnow()
-    db.session.commit()
+@main.route('/admin/nuke-transactions')
+def nuke_transactions():
+    Transactions.query.delete(); db.session.commit(); flash("HISTORY NUKED.", "danger")
     return redirect(url_for('main.index', open_admin=1))
 
-@main.route('/admin/products')
-def manage_products():
-    return render_template('manage_products.html', products=Products.query.order_by(Products.description).all())
+@main.route('/admin/reset-balances')
+def reset_balances():
+    Users.query.update({Users.balance: 0.00}); db.session.commit(); flash("Balances reset.", "warning")
+    return redirect(url_for('main.index', open_admin=1))
