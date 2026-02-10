@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Staff Manager</title>
+    <title>Team Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; } .table-card { border-radius: 15px; border: none; shadow: 0 4px 12px rgba(0,0,0,0.05); } .version-tag { font-size: 0.65rem; color: #adb5bd; position: fixed; bottom: 10px; right: 15px; }</style>
@@ -12,7 +12,7 @@
 <nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/?open_admin=1"><i class="fas fa-arrow-left me-2"></i> Admin Switchboard</a>
-        <button class="btn btn-light btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#userModal" onclick="clearUserForm()"><i class="fas fa-user-plus me-1"></i> Add New Staff</button>
+        <button class="btn btn-light btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#userModal" onclick="clearUserForm()"><i class="fas fa-user-plus me-1"></i> Add New Team Member</button>
     </div>
 </nav>
 
@@ -29,18 +29,35 @@
             <td>{% if u.is_admin %}<span class="badge bg-danger">Admin</span>{% else %}<span class="badge bg-secondary">User</span>{% endif %}</td>
             <td class="text-end px-4">
                 <button type="button" class="btn btn-sm btn-success shadow-sm" onclick='openPaymentModal({{ u.user_id }}, "{{ u.first_name }}")'><i class="fas fa-hand-holding-dollar"></i></button>
-                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm ms-1" onclick='editUser({{ {"user_id": u.user_id, "first_name": u.first_name, "last_name": u.last_name, "card_id": u.card_id, "is_admin": u.is_admin} | tojson }})'><i class="fas fa-edit"></i></button>
-                <a href="{{ url_for('main.delete_user', user_id=u.user_id) }}" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Delete user?')"><i class="fas fa-trash"></i></a>
+                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm ms-1" onclick='editUser({{ u.to_dict() | tojson }})'><i class="fas fa-edit"></i></button>
+                <a href="{{ url_for('main.delete_user', user_id=u.user_id) }}" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Delete member?')"><i class="fas fa-trash"></i></a>
             </td>
         </tr>{% endfor %}</tbody></table></div></div>
 </div>
 
-<div class="version-tag">User Manager v1.4.3</div>
+<div class="modal fade" id="paymentModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="{{ url_for('main.record_payment') }}" method="POST" class="modal-content shadow-lg border-0" style="border-radius: 20px;">
+    <div class="modal-header border-0 pb-0"><h5 class="fw-bold">Record Payment: <span id="payUserName"></span></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><input type="hidden" name="user_id" id="payUserId"><div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Top-up Amount ($)</label><input type="number" step="0.01" name="amount" class="form-control form-control-lg" placeholder="0.00" required autofocus></div></div>
+    <div class="modal-footer border-0"><button type="submit" class="btn btn-success w-100 py-3 shadow fw-bold">UPDATE BALANCE</button></div>
+</form></div></div>
+
+<div class="modal fade" id="userModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="{{ url_for('main.save_user') }}" method="POST" class="modal-content shadow-lg border-0" style="border-radius: 20px;">
+    <div class="modal-header border-0 pb-0"><h5 class="fw-bold" id="userModalTitle">Team Member Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+        <input type="hidden" name="user_id" id="formUserId">
+        <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Card / Barcode ID</label><input type="text" name="card_id" id="formCardId" class="form-control" required></div>
+        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">First Name</label><input type="text" name="first_name" id="formFirstName" class="form-control" required></div><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Last Name</label><input type="text" name="last_name" id="formLastName" class="form-control" required></div></div>
+        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_admin" id="formIsAdmin"><label class="form-check-label small fw-bold" for="formIsAdmin">Enable Admin Rights</label></div>
+    </div>
+    <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold">SAVE CHANGES</button></div>
+</form></div></div>
+
+<div class="version-tag">Manager v1.4.7</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function openPaymentModal(id, name) { document.getElementById('payUserId').value = id; document.getElementById('payUserName').innerText = name; new bootstrap.Modal(document.getElementById('paymentModal')).show(); }
-    function clearUserForm() { document.getElementById('userModalTitle').innerText = "Add New Staff"; document.getElementById('formUserId').value = ""; document.getElementById('formCardId').value = ""; document.getElementById('formCardId').readOnly = false; document.getElementById('formFirstName').value = ""; document.getElementById('formLastName').value = ""; document.getElementById('formIsAdmin').checked = false; }
-    function editUser(u) { document.getElementById('userModalTitle').innerText = "Edit Staff Member"; document.getElementById('formUserId').value = u.user_id; document.getElementById('formCardId').value = u.card_id; document.getElementById('formCardId').readOnly = true; document.getElementById('formFirstName').value = u.first_name; document.getElementById('formLastName').value = u.last_name; document.getElementById('formIsAdmin').checked = !!u.is_admin; new bootstrap.Modal(document.getElementById('userModal')).show(); }
+    function clearUserForm() { document.getElementById('userModalTitle').innerText = "Add New Team Member"; document.getElementById('formUserId').value = ""; document.getElementById('formCardId').value = ""; document.getElementById('formCardId').readOnly = false; document.getElementById('formFirstName').value = ""; document.getElementById('formLastName').value = ""; document.getElementById('formIsAdmin').checked = false; }
+    function editUser(u) { document.getElementById('userModalTitle').innerText = "Edit Team Member"; document.getElementById('formUserId').value = u.user_id; document.getElementById('formCardId').value = u.card_id; document.getElementById('formCardId').readOnly = true; document.getElementById('formFirstName').value = u.first_name; document.getElementById('formLastName').value = u.last_name; document.getElementById('formIsAdmin').checked = !!u.is_admin; new bootstrap.Modal(document.getElementById('userModal')).show(); }
 </script>
 </body>
 </html>

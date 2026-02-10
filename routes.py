@@ -1,11 +1,8 @@
-import csv
 import requests
-from io import StringIO
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, make_response, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from models import db, Users, Products, Transactions
 from datetime import datetime
 from decimal import Decimal
-from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
 main = Blueprint('main', __name__)
@@ -51,21 +48,6 @@ def index():
         grouped[cat].append(p)
     return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, needs_pin=needs_pin, pin_user=pin_user, just_bought=request.args.get('bought'))
 
-# --- SCANNING & MANUAL ADD ROUTES (THE FIX FOR YOUR RECENT CRASH) ---
-
-@main.route('/manual/')
-@main.route('/manual/<barcode>')
-def manual_add(barcode=None):
-    res = process_barcode(barcode)
-    return redirect(url_for('main.index', bought=res.get("description"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
-
-@main.route('/scan', methods=['POST'])
-def scan():
-    res = process_barcode(request.form.get('barcode', '').strip())
-    return redirect(url_for('main.index', bought=res.get('description'))) if res.get('status') == 'purchased' else redirect(url_for('main.index'))
-
-# --- ADMINISTRATIVE ROUTES ---
-
 @main.route('/admin/users')
 def manage_users():
     if 'user_id' not in session: return redirect(url_for('main.index'))
@@ -93,7 +75,18 @@ def delete_user(user_id):
         try:
             db.session.delete(user); db.session.commit()
         except IntegrityError:
-            db.session.rollback(); flash("User has history; delete failed.", "danger")
+            db.session.rollback(); flash("User has history; delete blocked.", "danger")
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/user/payment', methods=['POST'])
+def record_payment():
+    uid, amount = request.form.get('user_id'), Decimal(request.form.get('amount', '0.00'))
+    user = Users.query.get(int(uid))
+    if user:
+        user.balance = Decimal(str(user.balance or 0.0)) + amount
+        db.session.add(Transactions(user_id=user.user_id, upc_code='PAYMENT', amount=-amount))
+        db.session.commit()
+        flash(f"Balance updated.", "success")
     return redirect(url_for('main.manage_users'))
 
 @main.route('/admin/product/save', methods=['POST'])
@@ -111,39 +104,22 @@ def save_product_manual():
 def delete_product(upc):
     p = Products.query.get(upc)
     if p:
-        try:
-            db.session.delete(p); db.session.commit()
-        except IntegrityError:
-            db.session.rollback(); flash("Item has sales history; delete blocked.", "danger")
+        try: db.session.delete(p); db.session.commit()
+        except IntegrityError: db.session.rollback(); flash("Sales history exists; delete blocked.", "danger")
     return redirect(url_for('main.manage_products'))
-
-@main.route('/admin/user/payment', methods=['POST'])
-def record_payment():
-    uid, amount = request.form.get('user_id'), Decimal(request.form.get('amount', '0.00'))
-    user = Users.query.get(int(uid))
-    if user:
-        user.balance = Decimal(str(user.balance or 0.0)) + amount
-        db.session.add(Transactions(user_id=user.user_id, upc_code='PAYMENT', amount=-amount))
-        db.session.commit()
-        flash(f"Payment recorded.", "success")
-    return redirect(url_for('main.manage_users'))
-
-# --- PIN & SESSION ROUTES ---
 
 @main.route('/pin_verify', methods=['POST'])
 def pin_verify():
     uid, pin = request.form.get('user_id'), request.form.get('pin', '').strip()
     u = Users.query.get(int(uid))
-    if u and str(u.pin) == pin:
-        session['user_id'] = u.user_id; return redirect(url_for('main.index'))
+    if u and str(u.pin) == pin: session['user_id'] = u.user_id; return redirect(url_for('main.index'))
     flash("Incorrect PIN.", "danger"); return redirect(url_for('main.index', needs_pin=uid))
 
 @main.route('/pin_set', methods=['POST'])
 def pin_set():
     if 'user_id' in session:
         u, pin = Users.query.get(int(session['user_id'])), request.form.get('pin', '').strip()
-        if u and pin.isdigit() and len(pin) == 4:
-            u.pin = pin; db.session.commit(); flash("PIN enabled.", "success")
+        if u and pin.isdigit() and len(pin) == 4: u.pin = pin; db.session.commit(); flash("PIN enabled.", "success")
     return redirect(url_for('main.index'))
 
 @main.route('/pin_clear', methods=['POST'])
@@ -153,21 +129,25 @@ def pin_clear():
         if u: u.pin = None; db.session.commit(); flash("PIN removed.", "info")
     return redirect(url_for('main.index'))
 
+@main.route('/manual/<barcode>')
+def manual_add(barcode=None):
+    res = process_barcode(barcode)
+    return redirect(url_for('main.index', bought=res.get("description"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
+
+@main.route('/scan', methods=['POST'])
+def scan():
+    res = process_barcode(request.form.get('barcode', '').strip())
+    return redirect(url_for('main.index', bought=res.get('description'))) if res.get('status') == 'purchased' else redirect(url_for('main.index'))
+
 @main.route('/logout')
-def logout():
-    session.pop('user_id', None); return redirect(url_for('main.index'))
+def logout(): session.pop('user_id', None); return redirect(url_for('main.index'))
 
 @main.route('/select_user/<int:user_id>')
 def select_user(user_id):
     u = Users.query.get(user_id)
     if u and u.pin: return redirect(url_for('main.index', needs_pin=u.user_id))
-    if u:
-        session['user_id'] = u.user_id
-        u.last_seen = datetime.utcnow()
-        db.session.commit()
+    if u: session['user_id'] = u.user_id; u.last_seen = datetime.utcnow(); db.session.commit()
     return redirect(url_for('main.index'))
-
-# --- UTILITIES ---
 
 @main.route('/admin/get-product/<barcode>')
 def get_product(barcode):
@@ -183,36 +163,8 @@ def get_product(barcode):
     except: pass
     return jsonify({"found": False})
 
-@main.route('/admin/monthly_report')
-def monthly_report():
-    ym = request.args.get('month', datetime.utcnow().strftime("%Y-%m"))
-    start_dt = datetime.strptime(ym, "%Y-%m")
-    end_dt = datetime(start_dt.year + (1 if start_dt.month == 12 else 0), (start_dt.month % 12) + 1, 1)
-    tx_rows = db.session.query(Transactions, Products).outerjoin(Products, Products.upc_code == Transactions.upc_code).filter(Transactions.transaction_date >= start_dt, Transactions.transaction_date < end_dt).all()
-    rows = []
-    for u in Users.query.order_by(Users.last_name).all():
-        spent = sum(float(t.amount or 0) for t, p in tx_rows if t.user_id == u.user_id)
-        rows.append({"user": u, "spent": spent, "end_balance": float(u.balance)})
-    return render_template("monthly_report.html", rows=rows, selected_month=ym, month_label=start_dt.strftime("%B %Y"))
-
-@main.route('/undo')
-def undo():
-    uid = session.get('user_id')
-    if uid:
-        lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
-        if lt:
-            u, p = Users.query.get(uid), Products.query.get(lt.upc_code)
-            u.balance += lt.amount
-            if p and lt.amount > 0: p.stock_level += 1
-            db.session.delete(lt); db.session.commit()
-    return redirect(url_for('main.index'))
-
 @main.route('/admin/nuke-transactions')
-def nuke_transactions():
-    Transactions.query.delete(); db.session.commit(); flash("HISTORY NUKED.", "danger")
-    return redirect(url_for('main.index', open_admin=1))
+def nuke_transactions(): Transactions.query.delete(); db.session.commit(); flash("HISTORY NUKED.", "danger"); return redirect(url_for('main.index', open_admin=1))
 
 @main.route('/admin/reset-balances')
-def reset_balances():
-    Users.query.update({Users.balance: 0.00}); db.session.commit(); flash("Balances reset.", "warning")
-    return redirect(url_for('main.index', open_admin=1))
+def reset_balances(): Users.query.update({Users.balance: 0.00}); db.session.commit(); flash("Balances reset.", "warning"); return redirect(url_for('main.index', open_admin=1))
