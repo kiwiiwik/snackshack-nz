@@ -44,28 +44,46 @@ def index():
         current_user = Users.query.get(int(session['user_id']))
         if current_user and current_user.is_admin:
             all_staff = Users.query.order_by(Users.first_name).all()
-            recent_audits = Products.query.filter(Products.last_audited != None).order_by(Products.last_audited.desc()).limit(5).all()
     cat_order = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
     grouped = {cat: [] for cat in cat_order}
     for p in Products.query.filter_by(is_quick_item=True).all():
         cat = p.category if p.category in grouped else "Snacks"
         grouped[cat].append(p)
-    return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, recent_audits=recent_audits, just_bought=request.args.get('bought'), needs_pin=needs_pin, pin_user=pin_user)
+    return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, needs_pin=needs_pin, pin_user=pin_user)
 
-@main.route('/select_user/<int:user_id>')
-def select_user(user_id):
-    u = Users.query.get(user_id)
-    if u and u.pin: return redirect(url_for('main.index', needs_pin=u.user_id))
-    if u:
-        session['user_id'] = u.user_id
-        u.last_seen = datetime.utcnow()
-        db.session.commit()
-    return redirect(url_for('main.index'))
+# --- ADMINISTRATIVE ROUTES (MAPPED TO TEAM/PRODUCTS BUTTONS) ---
 
 @main.route('/admin/users')
 def manage_users():
     if 'user_id' not in session: return redirect(url_for('main.index'))
     return render_template('manage_users.html', users=Users.query.order_by(Users.last_name).all())
+
+@main.route('/admin/products')
+def manage_products():
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    return render_template('manage_products.html', products=Products.query.order_by(Products.description).all())
+
+@main.route('/admin/user/delete/<int:user_id>')
+def delete_user(user_id):
+    user = Users.query.get(user_id)
+    if user and int(session.get('user_id')) != user_id:
+        try:
+            db.session.delete(user); db.session.commit()
+        except IntegrityError:
+            db.session.rollback(); flash("User has history; delete blocked.", "danger")
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/product/delete/<upc>')
+def delete_product(upc):
+    p = Products.query.get(upc)
+    if p:
+        try:
+            db.session.delete(p); db.session.commit()
+        except IntegrityError:
+            db.session.rollback(); flash("Item has sales history; delete blocked.", "danger")
+    return redirect(url_for('main.manage_products'))
+
+# --- SAVING & TRANSACTION ROUTES ---
 
 @main.route('/admin/user/save', methods=['POST'])
 def save_user():
@@ -75,29 +93,6 @@ def save_user():
     user.first_name, user.last_name = request.form.get('first_name'), request.form.get('last_name')
     user.is_admin = 'is_admin' in request.form
     db.session.commit()
-    return redirect(url_for('main.manage_users'))
-
-@main.route('/admin/user/delete/<int:user_id>')
-def delete_user(user_id):
-    user = Users.query.get(user_id)
-    if user and int(session.get('user_id')) != user_id:
-        try:
-            db.session.delete(user); db.session.commit()
-        except IntegrityError:
-            db.session.rollback(); flash("User has history; delete failed.", "danger")
-    return redirect(url_for('main.manage_users'))
-
-@main.route('/admin/user/payment', methods=['POST'])
-def record_payment():
-    uid, amount = request.form.get('user_id'), Decimal(request.form.get('amount', '0.00'))
-    user = Users.query.get(int(uid))
-    if user:
-        user.balance = Decimal(str(user.balance or 0.0)) + amount
-        pay_prod = Products.query.get('PAYMENT') or Products(upc_code='PAYMENT', description='Account Payment', price=0, stock_level=0, category='System')
-        if not Products.query.get('PAYMENT'): db.session.add(pay_prod)
-        db.session.add(Transactions(user_id=user.user_id, upc_code='PAYMENT', amount=-amount))
-        db.session.commit()
-        flash(f"Payment recorded.", "success")
     return redirect(url_for('main.manage_users'))
 
 @main.route('/admin/product/save', methods=['POST'])
@@ -111,15 +106,18 @@ def save_product_manual():
     db.session.commit()
     return redirect(url_for('main.manage_products'))
 
-@main.route('/admin/product/delete/<upc>')
-def delete_product(upc):
-    p = Products.query.get(upc)
-    if p:
-        try:
-            db.session.delete(p); db.session.commit()
-        except IntegrityError:
-            db.session.rollback(); flash("Item has sales history; delete blocked.", "danger")
-    return redirect(url_for('main.manage_products'))
+@main.route('/admin/user/payment', methods=['POST'])
+def record_payment():
+    uid, amount = request.form.get('user_id'), Decimal(request.form.get('amount', '0.00'))
+    user = Users.query.get(int(uid))
+    if user:
+        user.balance = Decimal(str(user.balance or 0.0)) + amount
+        db.session.add(Transactions(user_id=user.user_id, upc_code='PAYMENT', amount=-amount))
+        db.session.commit()
+        flash(f"Payment recorded.", "success")
+    return redirect(url_for('main.manage_users'))
+
+# --- PIN & SESSION ROUTES ---
 
 @main.route('/pin_verify', methods=['POST'])
 def pin_verify():
@@ -144,20 +142,21 @@ def pin_clear():
         if u: u.pin = None; db.session.commit(); flash("PIN removed.", "info")
     return redirect(url_for('main.index'))
 
-@main.route('/manual/')
-@main.route('/manual/<barcode>')
-def manual_add(barcode=None):
-    res = process_barcode(barcode)
-    return redirect(url_for('main.index', bought=res.get("description"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
+# --- CORE UTILITY ROUTES ---
 
 @main.route('/logout')
 def logout():
     session.pop('user_id', None); return redirect(url_for('main.index'))
 
-@main.route('/scan', methods=['POST'])
-def scan():
-    res = process_barcode(request.form.get('barcode', '').strip())
-    return redirect(url_for('main.index', bought=res.get('description'))) if res.get('status') == 'purchased' else redirect(url_for('main.index'))
+@main.route('/select_user/<int:user_id>')
+def select_user(user_id):
+    u = Users.query.get(user_id)
+    if u and u.pin: return redirect(url_for('main.index', needs_pin=u.user_id))
+    if u:
+        session['user_id'] = u.user_id
+        u.last_seen = datetime.utcnow()
+        db.session.commit()
+    return redirect(url_for('main.index'))
 
 @main.route('/admin/get-product/<barcode>')
 def get_product(barcode):
@@ -179,14 +178,11 @@ def monthly_report():
     start_dt = datetime.strptime(ym, "%Y-%m")
     end_dt = datetime(start_dt.year + (1 if start_dt.month == 12 else 0), (start_dt.month % 12) + 1, 1)
     tx_rows = db.session.query(Transactions, Products).outerjoin(Products, Products.upc_code == Transactions.upc_code).filter(Transactions.transaction_date >= start_dt, Transactions.transaction_date < end_dt).all()
-    tx_by_user = {}
-    for t, p in tx_rows:
-        tx_by_user.setdefault(t.user_id, []).append({"when": t.transaction_date.strftime("%Y-%m-%d %H:%M"), "desc": (p.description if p else "Item"), "amount": float(t.amount or 0)})
     rows = []
     for u in Users.query.order_by(Users.last_name).all():
-        spent = sum(t['amount'] for t in tx_by_user.get(u.user_id, []))
-        rows.append({"user": u, "spent": spent, "start_balance": 0, "end_balance": float(u.balance), "txs": tx_by_user.get(u.user_id, [])})
-    return render_template("monthly_report.html", rows=rows, selected_month=ym, month_label=start_dt.strftime("%B %Y"), start_iso=start_dt.strftime("%Y-%m-%d"), end_iso=end_dt.strftime("%Y-%m-%d"))
+        spent = sum(float(t.amount or 0) for t, p in tx_rows if t.user_id == u.user_id)
+        rows.append({"user": u, "spent": spent, "end_balance": float(u.balance)})
+    return render_template("monthly_report.html", rows=rows, selected_month=ym, month_label=start_dt.strftime("%B %Y"))
 
 @main.route('/undo')
 def undo():
