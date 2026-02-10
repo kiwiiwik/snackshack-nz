@@ -37,7 +37,7 @@ def process_barcode(barcode):
 
 @main.route('/')
 def index():
-    current_user, all_staff, recent_audits = None, None, None
+    current_user, all_staff = None, None
     needs_pin = request.args.get('needs_pin')
     pin_user = Users.query.get(int(needs_pin)) if needs_pin else None
     if 'user_id' in session:
@@ -49,9 +49,22 @@ def index():
     for p in Products.query.filter_by(is_quick_item=True).all():
         cat = p.category if p.category in grouped else "Snacks"
         grouped[cat].append(p)
-    return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, needs_pin=needs_pin, pin_user=pin_user)
+    return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, needs_pin=needs_pin, pin_user=pin_user, just_bought=request.args.get('bought'))
 
-# --- ADMINISTRATIVE ROUTES (MAPPED TO TEAM/PRODUCTS BUTTONS) ---
+# --- SCANNING & MANUAL ADD ROUTES (THE FIX FOR YOUR RECENT CRASH) ---
+
+@main.route('/manual/')
+@main.route('/manual/<barcode>')
+def manual_add(barcode=None):
+    res = process_barcode(barcode)
+    return redirect(url_for('main.index', bought=res.get("description"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
+
+@main.route('/scan', methods=['POST'])
+def scan():
+    res = process_barcode(request.form.get('barcode', '').strip())
+    return redirect(url_for('main.index', bought=res.get('description'))) if res.get('status') == 'purchased' else redirect(url_for('main.index'))
+
+# --- ADMINISTRATIVE ROUTES ---
 
 @main.route('/admin/users')
 def manage_users():
@@ -63,28 +76,6 @@ def manage_products():
     if 'user_id' not in session: return redirect(url_for('main.index'))
     return render_template('manage_products.html', products=Products.query.order_by(Products.description).all())
 
-@main.route('/admin/user/delete/<int:user_id>')
-def delete_user(user_id):
-    user = Users.query.get(user_id)
-    if user and int(session.get('user_id')) != user_id:
-        try:
-            db.session.delete(user); db.session.commit()
-        except IntegrityError:
-            db.session.rollback(); flash("User has history; delete blocked.", "danger")
-    return redirect(url_for('main.manage_users'))
-
-@main.route('/admin/product/delete/<upc>')
-def delete_product(upc):
-    p = Products.query.get(upc)
-    if p:
-        try:
-            db.session.delete(p); db.session.commit()
-        except IntegrityError:
-            db.session.rollback(); flash("Item has sales history; delete blocked.", "danger")
-    return redirect(url_for('main.manage_products'))
-
-# --- SAVING & TRANSACTION ROUTES ---
-
 @main.route('/admin/user/save', methods=['POST'])
 def save_user():
     uid = request.form.get('user_id')
@@ -93,6 +84,16 @@ def save_user():
     user.first_name, user.last_name = request.form.get('first_name'), request.form.get('last_name')
     user.is_admin = 'is_admin' in request.form
     db.session.commit()
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/user/delete/<int:user_id>')
+def delete_user(user_id):
+    user = Users.query.get(user_id)
+    if user and int(session.get('user_id')) != user_id:
+        try:
+            db.session.delete(user); db.session.commit()
+        except IntegrityError:
+            db.session.rollback(); flash("User has history; delete failed.", "danger")
     return redirect(url_for('main.manage_users'))
 
 @main.route('/admin/product/save', methods=['POST'])
@@ -104,6 +105,16 @@ def save_product_manual():
     p.price, p.category, p.stock_level = Decimal(request.form.get('price', '0.00')), request.form.get('category'), int(request.form.get('stock_level', 0))
     p.is_quick_item = 'is_quick_item' in request.form
     db.session.commit()
+    return redirect(url_for('main.manage_products'))
+
+@main.route('/admin/product/delete/<upc>')
+def delete_product(upc):
+    p = Products.query.get(upc)
+    if p:
+        try:
+            db.session.delete(p); db.session.commit()
+        except IntegrityError:
+            db.session.rollback(); flash("Item has sales history; delete blocked.", "danger")
     return redirect(url_for('main.manage_products'))
 
 @main.route('/admin/user/payment', methods=['POST'])
@@ -142,8 +153,6 @@ def pin_clear():
         if u: u.pin = None; db.session.commit(); flash("PIN removed.", "info")
     return redirect(url_for('main.index'))
 
-# --- CORE UTILITY ROUTES ---
-
 @main.route('/logout')
 def logout():
     session.pop('user_id', None); return redirect(url_for('main.index'))
@@ -157,6 +166,8 @@ def select_user(user_id):
         u.last_seen = datetime.utcnow()
         db.session.commit()
     return redirect(url_for('main.index'))
+
+# --- UTILITIES ---
 
 @main.route('/admin/get-product/<barcode>')
 def get_product(barcode):
