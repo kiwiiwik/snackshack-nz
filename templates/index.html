@@ -12,7 +12,6 @@
         .initial-avatar { width: 70px; height: 70px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.5rem; }
         .pin-badge { position: absolute; top: 15px; right: 15px; color: #6c757d; font-size: 1.1rem; }
         .admin-badge { position: absolute; top: 15px; left: 15px; color: #dc3545; font-size: 1.1rem; }
-        .product-img { width: 100%; height: 100px; object-fit: contain; padding: 5px; }
         .price-text { color: #198754; font-weight: bold; font-size: 1rem; }
         .switchboard-btn { height: 160px; border-radius: 25px; font-size: 1.3rem; font-weight: bold; transition: 0.2s; border: none; width: 100%; color: white; }
         .num-btn { height: 65px; font-size: 1.4rem; font-weight: bold; border-radius: 12px; border: 1px solid #dee2e6; background: white; }
@@ -46,10 +45,6 @@
 </nav>
 
 <div class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
-    {% endwith %}
-
     {% if not user %}
         <h4 class="text-center mb-5 text-secondary">Select User</h4>
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-4 mb-5">
@@ -80,8 +75,6 @@
     {% endif %}
 </div>
 
-{% if just_bought %}<div class="fixed-transaction-bar p-3 bg-white border-top shadow-lg"><div class="container d-flex justify-content-between align-items-center"><span class="fs-5">Purchased: <strong>{{ just_bought }}</strong></span><a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-lg">Undo Purchase</a></div></div>{% endif %}
-
 {% if needs_pin %}
 <div class="modal fade" id="pinVerifyModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
@@ -92,9 +85,7 @@
                 <input type="hidden" name="user_id" value="{{ needs_pin }}">
                 <input type="password" id="pinVerifyInput" name="pin" class="form-control pin-input mb-4" readonly required>
                 <div class="row g-2">
-                    {% for n in ['1','2','3','4','5','6','7','8','9'] %}
-                    <div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pin-digit="{{ n }}">{{ n }}</button></div>
-                    {% endfor %}
+                    {% for n in ['1','2','3','4','5','6','7','8','9'] %}<div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pin-digit="{{ n }}">{{ n }}</button></div>{% endfor %}
                     <div class="col-4"><button type="button" class="btn num-btn w-100 text-danger shadow-sm" id="pinVerifyClear"><i class="fas fa-times"></i></button></div>
                     <div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pin-digit="0">0</button></div>
                     <div class="col-4"><button type="submit" class="btn num-btn w-100 text-success shadow-sm"><i class="fas fa-check"></i></button></div>
@@ -114,9 +105,7 @@
                 <p class="text-muted mb-4">Choose a 4-digit PIN</p>
                 <input type="password" id="pinSetInput" name="pin" class="form-control pin-input mb-4" readonly required>
                 <div class="row g-2">
-                    {% for n in ['1','2','3','4','5','6','7','8','9'] %}
-                    <div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pinset-digit="{{ n }}">{{ n }}</button></div>
-                    {% endfor %}
+                    {% for n in ['1','2','3','4','5','6','7','8','9'] %}<div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pinset-digit="{{ n }}">{{ n }}</button></div>{% endfor %}
                     <div class="col-4"><button type="button" class="btn num-btn w-100 text-danger shadow-sm" id="pinSetClear">C</button></div>
                     <div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pinset-digit="0">0</button></div>
                     <div class="col-4"><button type="submit" class="btn num-btn w-100 text-success shadow-sm">SAVE</button></div>
@@ -140,10 +129,10 @@
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
                         <a href="{{ url_for('main.monthly_report') }}" class="btn btn-sm btn-outline-info">Report</a>
                         <a href="{{ url_for('main.reset_balances') }}" class="btn btn-sm btn-outline-warning fw-bold" onclick="return confirm('Reset balances?')">Reset Balances</a>
-                        <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('NUKE ALL HISTORY?')">NUKE ALL</a>
+                        <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('NUKE HISTORY?')">NUKE ALL</a>
                     </div>
                 </div>
-                <div class="version-tag">v1.4.6</div>
+                <div class="version-tag">v1.4.8</div>
             </div>
         </div>
     </div>
@@ -154,19 +143,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Activity Timer logic - 15 Seconds
     {% if user %}
     let logoutTimer;
     function resetTimer() {
         clearTimeout(logoutTimer);
         if (document.querySelector('.modal.show')) return;
-        logoutTimer = setTimeout(() => {
-            window.location.href = "{{ url_for('main.logout') }}";
-        }, 15000); 
+        logoutTimer = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 15000); 
     }
-    ['mousemove', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(evt => 
-        window.addEventListener(evt, resetTimer, false)
-    );
+    ['mousemove', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(evt => window.addEventListener(evt, resetTimer, false));
     document.addEventListener('hidden.bs.modal', resetTimer);
     {% endif %}
 
@@ -175,13 +159,10 @@
         {% if needs_pin %} new bootstrap.Modal(document.getElementById('pinVerifyModal')).show(); {% endif %}
         {% if user %} resetTimer(); {% endif %}
     };
-
     function setupKeypad(attr, inputId, clearId) {
         const input = document.getElementById(inputId);
         if(!input) return;
-        document.querySelectorAll(`[${attr}]`).forEach(b => {
-            b.onclick = () => { if(input.value.length < 4) input.value += b.getAttribute(attr); };
-        });
+        document.querySelectorAll(`[${attr}]`).forEach(b => { b.onclick = () => { if(input.value.length < 4) input.value += b.getAttribute(attr); }; });
         document.getElementById(clearId).onclick = () => input.value = "";
     }
     setupKeypad('data-pin-digit', 'pinVerifyInput', 'pinVerifyClear');
