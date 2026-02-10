@@ -14,7 +14,7 @@
         .admin-badge { position: absolute; top: 15px; left: 15px; color: #dc3545; font-size: 1.1rem; }
         .product-img { width: 100%; height: 100px; object-fit: contain; padding: 5px; }
         .price-text { color: #198754; font-weight: bold; font-size: 1rem; }
-        .switchboard-btn { height: 140px; border-radius: 25px; font-size: 1.2rem; font-weight: bold; transition: 0.2s; border: none; width: 100%; color: white; }
+        .switchboard-btn { height: 160px; border-radius: 25px; font-size: 1.3rem; font-weight: bold; transition: 0.2s; border: none; width: 100%; color: white; }
         .num-btn { height: 65px; font-size: 1.4rem; font-weight: bold; border-radius: 12px; border: 1px solid #dee2e6; background: white; }
         .pin-input { font-size: 2.5rem; letter-spacing: 1rem; text-align: center; font-weight: bold; border-radius: 15px; }
         .version-tag { font-size: 0.65rem; color: #adb5bd; position: absolute; bottom: 10px; right: 15px; }
@@ -132,10 +132,9 @@
         <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">
             <div class="modal-body p-5 text-center">
                 <h2 class="fw-bold mb-5 text-dark">Admin Switchboard</h2>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-4"><button class="switchboard-btn bg-danger shadow" data-bs-toggle="modal" data-bs-target="#auditModal" data-bs-dismiss="modal"><i class="fas fa-clipboard-check mb-2 fa-2x"></i><br>AUDIT</button></div>
-                    <div class="col-md-4"><a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center shadow text-decoration-none"><i class="fas fa-boxes mb-2 fa-2x"></i><br>PRODUCTS</a></div>
-                    <div class="col-md-4"><a href="{{ url_for('main.manage_users') }}" class="btn switchboard-btn bg-primary d-flex flex-column align-items-center justify-content-center shadow text-decoration-none"><i class="fas fa-users mb-2 fa-2x"></i><br>STAFF</a></div>
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6"><a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center shadow text-decoration-none"><i class="fas fa-boxes mb-3 fa-2x"></i><br>PRODUCTS</a></div>
+                    <div class="col-md-6"><a href="{{ url_for('main.manage_users') }}" class="btn switchboard-btn bg-primary d-flex flex-column align-items-center justify-content-center shadow text-decoration-none"><i class="fas fa-users mb-3 fa-2x"></i><br>STAFF</a></div>
                 </div>
                 <div class="border-top pt-4 mt-4 text-center">
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
@@ -144,7 +143,7 @@
                         <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('NUKE ALL HISTORY?')">NUKE ALL</a>
                     </div>
                 </div>
-                <div class="version-tag">v1.4.1</div>
+                <div class="version-tag">v1.4.2</div>
             </div>
         </div>
     </div>
