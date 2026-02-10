@@ -34,77 +34,57 @@ def process_barcode(barcode):
 
 @main.route('/')
 def index():
-    current_user, all_staff = None, None
+    current_user = None
     needs_pin = request.args.get('needs_pin')
     pin_user = Users.query.get(int(needs_pin)) if needs_pin else None
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
-        if current_user and current_user.is_admin:
-            all_staff = Users.query.order_by(Users.first_name).all()
+    
+    # Simple category grouping for the storefront
     cat_order = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
     grouped = {cat: [] for cat in cat_order}
     for p in Products.query.filter_by(is_quick_item=True).all():
         cat = p.category if p.category in grouped else "Snacks"
         grouped[cat].append(p)
-    return render_template('index.html', user=current_user, users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), grouped_products={k: v for k, v in grouped.items() if v}, staff=all_staff, needs_pin=needs_pin, pin_user=pin_user, just_bought=request.args.get('bought'))
+        
+    return render_template('index.html', 
+        user=current_user, 
+        users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), 
+        grouped_products={k: v for k, v in grouped.items() if v}, 
+        needs_pin=needs_pin, 
+        pin_user=pin_user, 
+        just_bought=request.args.get('bought'))
 
-# --- REPORTING (RESTORED TO FIX CRASH) ---
+# --- STOREFRONT LOGIC ---
 
-@main.route('/admin/monthly_report')
-def monthly_report():
-    ym = request.args.get('month', datetime.utcnow().strftime("%Y-%m"))
-    start_dt = datetime.strptime(ym, "%Y-%m")
-    # Calculate end of month
-    end_dt = datetime(start_dt.year + (1 if start_dt.month == 12 else 0), (start_dt.month % 12) + 1, 1)
-    tx_rows = db.session.query(Transactions, Products).outerjoin(Products, Products.upc_code == Transactions.upc_code).filter(Transactions.transaction_date >= start_dt, Transactions.transaction_date < end_dt).all()
-    rows = []
-    for u in Users.query.order_by(Users.last_name).all():
-        spent = sum(float(t.amount or 0) for t, p in tx_rows if t.user_id == u.user_id)
-        rows.append({"user": u, "spent": spent, "end_balance": float(u.balance)})
-    return render_template("monthly_report.html", rows=rows, selected_month=ym, month_label=start_dt.strftime("%B %Y"))
+@main.route('/manual/<barcode>')
+def manual_add(barcode=None):
+    res = process_barcode(barcode)
+    return redirect(url_for('main.index', bought=res.get("description"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
 
-# --- ADMINISTRATIVE ROUTES ---
+@main.route('/scan', methods=['POST'])
+def scan():
+    res = process_barcode(request.form.get('barcode', '').strip())
+    return redirect(url_for('main.index', bought=res.get('description'))) if res.get('status') == 'purchased' else redirect(url_for('main.index'))
 
-@main.route('/admin/users')
-def manage_users():
-    if 'user_id' not in session: return redirect(url_for('main.index'))
-    return render_template('manage_users.html', users=Users.query.order_by(Users.last_name).all())
+@main.route('/undo')
+def undo():
+    uid = session.get('user_id')
+    if uid:
+        lt = Transactions.query.filter_by(user_id=uid).order_by(Transactions.transaction_date.desc()).first()
+        if lt:
+            u, p = Users.query.get(uid), Products.query.get(lt.upc_code)
+            u.balance += lt.amount
+            if p and lt.amount > 0: p.stock_level += 1
+            db.session.delete(lt); db.session.commit()
+    return redirect(url_for('main.index'))
+
+# --- PRODUCT MANAGEMENT (RETAINED) ---
 
 @main.route('/admin/products')
 def manage_products():
     if 'user_id' not in session: return redirect(url_for('main.index'))
     return render_template('manage_products.html', products=Products.query.order_by(Products.description).all())
-
-@main.route('/admin/user/save', methods=['POST'])
-def save_user():
-    uid = request.form.get('user_id')
-    user = Users.query.get(int(uid)) if uid else Users(card_id=request.form.get('card_id', '').strip())
-    if not uid: db.session.add(user)
-    user.first_name, user.last_name = request.form.get('first_name'), request.form.get('last_name')
-    user.is_admin = 'is_admin' in request.form
-    db.session.commit()
-    return redirect(url_for('main.manage_users'))
-
-@main.route('/admin/user/delete/<int:user_id>')
-def delete_user(user_id):
-    user = Users.query.get(user_id)
-    if user and int(session.get('user_id')) != user_id:
-        try:
-            db.session.delete(user); db.session.commit()
-        except IntegrityError:
-            db.session.rollback(); flash("User has history; delete failed.", "danger")
-    return redirect(url_for('main.manage_users'))
-
-@main.route('/admin/user/payment', methods=['POST'])
-def record_payment():
-    uid, amount = request.form.get('user_id'), Decimal(request.form.get('amount', '0.00'))
-    user = Users.query.get(int(uid))
-    if user:
-        user.balance = Decimal(str(user.balance or 0.0)) + amount
-        db.session.add(Transactions(user_id=user.user_id, upc_code='PAYMENT', amount=-amount))
-        db.session.commit()
-        flash(f"Balance updated.", "success")
-    return redirect(url_for('main.manage_users'))
 
 @main.route('/admin/product/save', methods=['POST'])
 def save_product_manual():
@@ -125,7 +105,7 @@ def delete_product(upc):
         except IntegrityError: db.session.rollback(); flash("Sales history exists; delete blocked.", "danger")
     return redirect(url_for('main.manage_products'))
 
-# --- PIN & SCANNING ROUTES ---
+# --- SECURITY & SESSIONS ---
 
 @main.route('/pin_verify', methods=['POST'])
 def pin_verify():
@@ -147,18 +127,6 @@ def pin_clear():
         u = Users.query.get(int(session['user_id']))
         if u: u.pin = None; db.session.commit(); flash("PIN removed.", "info")
     return redirect(url_for('main.index'))
-
-@main.route('/manual/<barcode>')
-def manual_add(barcode=None):
-    res = process_barcode(barcode)
-    return redirect(url_for('main.index', bought=res.get("description"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
-
-@main.route('/scan', methods=['POST'])
-def scan():
-    res = process_barcode(request.form.get('barcode', '').strip())
-    return redirect(url_for('main.index', bought=res.get('description'))) if res.get('status') == 'purchased' else redirect(url_for('main.index'))
-
-# --- CORE UTILITIES ---
 
 @main.route('/logout')
 def logout(): session.pop('user_id', None); return redirect(url_for('main.index'))
@@ -183,9 +151,3 @@ def get_product(barcode):
                 return jsonify({"found": True, "mfg": prod.get("brands", ""), "desc": prod.get("product_name", ""), "size": prod.get("quantity", ""), "soh": 0})
     except: pass
     return jsonify({"found": False})
-
-@main.route('/admin/nuke-transactions')
-def nuke_transactions(): Transactions.query.delete(); db.session.commit(); flash("HISTORY NUKED.", "danger"); return redirect(url_for('main.index', open_admin=1))
-
-@main.route('/admin/reset-balances')
-def reset_balances(): Users.query.update({Users.balance: 0.00}); db.session.commit(); flash("Balances reset.", "warning"); return redirect(url_for('main.index', open_admin=1))
