@@ -5,23 +5,33 @@
     <title>Product Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; } .table-card { border-radius: 15px; border: none; shadow: 0 4px 12px rgba(0,0,0,0.05); } .version-tag { font-size: 0.65rem; color: #adb5bd; position: fixed; bottom: 10px; right: 15px; }</style>
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+        .table-card { border-radius: 15px; border: none; }
+        /* Virtual Keyboard Styles */
+        .keyboard-container { background: #dee2e6; padding: 15px; border-radius: 0 0 20px 20px; border-top: 2px solid #ced4da; user-select: none; }
+        .keyboard-row { display: flex; justify-content: center; margin-bottom: 8px; gap: 6px; }
+        .key { height: 60px; min-width: 45px; background: white; border: 1px solid #adb5bd; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; cursor: pointer; flex-grow: 1; transition: 0.1s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .key:active { background: #0d6efd; color: white; transform: scale(0.95); }
+        .key.wide { flex-grow: 3; background: #f8f9fa; }
+        .key.extra-wide { flex-grow: 12; }
+        .key.special { background: #adb5bd; color: white; }
+        .version-tag { font-size: 0.65rem; color: #adb5bd; position: fixed; bottom: 10px; right: 15px; }
+        .vk-input:focus { border-color: #0d6efd; box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25); }
+    </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/?open_admin=1"><i class="fas fa-arrow-left me-2"></i> Admin Switchboard</a>
+        <a class="navbar-brand fw-bold" href="/?open_admin=1"><i class="fas fa-arrow-left me-2"></i> Admin Tools</a>
         <button class="btn btn-success btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#editModal" onclick="clearForm()"><i class="fas fa-plus me-1"></i> Add New Item</button>
     </div>
 </nav>
 
 <div class="container-fluid px-4">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4">{{ msg }}</div>{% endfor %}{% endif %}
-    {% endwith %}
-    
-    <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>UPC / PLU</th><th>Brand</th><th>Description</th><th>Price</th><th>Stock</th><th class="text-end px-4">Actions</th></tr></thead>
+    <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0">
+        <thead class="table-light"><tr><th>UPC / PLU</th><th>Brand</th><th>Description</th><th>Price</th><th>Stock</th><th class="text-end px-4">Actions</th></tr></thead>
         <tbody>{% for p in products %}<tr>
             <td><code>{{ p.upc_code }}</code></td><td>{{ p.manufacturer or '-' }}</td><td class="fw-bold">{{ p.description }}</td><td class="text-success fw-bold">${{ "%.2f"|format(p.price) }}</td>
             <td><span class="badge bg-light text-dark border">{{ p.stock_level }}</span></td>
@@ -29,47 +39,99 @@
                 <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#editModal" onclick='editProduct({{ p.to_dict() | tojson }})'><i class="fas fa-edit"></i></button>
                 <a href="{{ url_for('main.delete_product', upc=p.upc_code or 'UNKNOWN') }}" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Delete item?')"><i class="fas fa-trash"></i></a>
             </td>
-        </tr>{% endfor %}</tbody></table></div></div>
+        </tr>{% endfor %}</tbody>
+    </table></div></div>
 </div>
 
-<div class="modal fade" id="editModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><form action="{{ url_for('main.save_product_manual') }}" method="POST" class="modal-content shadow-lg border-0" style="border-radius: 20px;">
-    <div class="modal-header border-0 pb-0"><h5 class="fw-bold" id="modalTitle">Item Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">UPC / PLU CODE</label>
-            <input type="text" name="upc_code" id="formUPC" class="form-control" required onkeydown="if(event.key==='Enter'){event.preventDefault();lookupProductManual(this.value);}">
-        </div>
-        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Category</label><select name="category" id="formCat" class="form-select"><option value="Drinks">Drinks</option><option value="Snacks">Snacks</option><option value="Candy">Candy</option><option value="Frozen">Frozen</option><option value="Coffee Pods">Coffee Pods</option><option value="Sweepstake Tickets">Sweepstake Tickets</option></select></div><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Price ($)</label><input type="number" step="0.01" name="price" id="formPrice" class="form-control"></div></div>
-        <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Brand</label><input type="text" name="manufacturer" id="formMfg" class="form-control"></div>
-        <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Description</label><input type="text" name="description" id="formDesc" class="form-control" required></div>
-        <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Size</label><input type="text" name="size" id="formSize" class="form-control"></div><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Current Stock</label><input type="number" name="stock_level" id="formStock" class="form-control"></div></div>
-        <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_quick_item" id="formQuick"><label class="form-check-label small fw-bold" for="formQuick">Show on Kiosk Menu</label></div>
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form action="{{ url_for('main.save_product_manual') }}" method="POST" class="modal-content shadow-lg border-0" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header border-0 pb-0"><h5 class="fw-bold" id="modalTitle">Item Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">UPC / PLU CODE</label>
+                    <input type="text" name="upc_code" id="formUPC" class="form-control vk-input" required onkeydown="if(event.key==='Enter'){event.preventDefault();lookupProductManual(this.value);}">
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Category</label>
+                        <select name="category" id="formCat" class="form-select"><option value="Drinks">Drinks</option><option value="Snacks">Snacks</option><option value="Candy">Candy</option><option value="Frozen">Frozen</option><option value="Coffee Pods">Coffee Pods</option><option value="Sweepstake Tickets">Sweepstake Tickets</option></select>
+                    </div>
+                    <div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Price ($)</label>
+                        <input type="number" step="0.01" name="price" id="formPrice" class="form-control vk-input">
+                    </div>
+                </div>
+                <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Brand</label><input type="text" name="manufacturer" id="formMfg" class="form-control vk-input"></div>
+                <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Description</label><input type="text" name="description" id="formDesc" class="form-control vk-input" required></div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Size</label><input type="text" name="size" id="formSize" class="form-control vk-input"></div>
+                    <div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Current Stock</label><input type="number" name="stock_level" id="formStock" class="form-control vk-input"></div>
+                </div>
+                <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" name="is_quick_item" id="formQuick"><label class="form-check-label small fw-bold" for="formQuick">Show on Kiosk Menu</label></div>
+                <button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold mb-2">SAVE CHANGES</button>
+            </div>
+            
+            <div id="keyboard" class="keyboard-container">
+                <div class="keyboard-row" id="row-nums"></div>
+                <div class="keyboard-row" id="row-1"></div>
+                <div class="keyboard-row" id="row-2"></div>
+                <div class="keyboard-row" id="row-3"></div>
+                <div class="keyboard-row">
+                    <div class="key wide special" onclick="toggleShift()">SHIFT</div>
+                    <div class="key extra-wide" onclick="addKey(' ')">SPACE</div>
+                    <div class="key wide special" onclick="backspace()"><i class="fas fa-backspace"></i></div>
+                </div>
+            </div>
+        </form>
     </div>
-    <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold">SAVE CHANGES</button></div>
-</form></div></div>
+</div>
 
-<div class="version-tag">Manager v1.4.1</div>
+<div class="version-tag">Manager v1.5.3</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    let activeInput = null;
+    let isShift = false;
+    const keys = [
+        {row: 'row-nums', val: '1234567890'},
+        {row: 'row-1', val: 'qwertyuiop'},
+        {row: 'row-2', val: 'asdfghjkl'},
+        {row: 'row-3', val: 'zxcvbnm.'}
+    ];
+
+    function renderKeyboard() {
+        keys.forEach(k => {
+            const container = document.getElementById(k.row);
+            container.innerHTML = '';
+            k.val.split('').forEach(char => {
+                const display = isShift ? char.toUpperCase() : char;
+                container.innerHTML += `<div class="key" onclick="addKey('${display}')">${display}</div>`;
+            });
+        });
+    }
+
+    function addKey(char) { if(activeInput) { activeInput.value += char; activeInput.dispatchEvent(new Event('input')); activeInput.focus(); }}
+    function backspace() { if(activeInput) { activeInput.value = activeInput.value.slice(0, -1); activeInput.dispatchEvent(new Event('input')); activeInput.focus(); }}
+    function toggleShift() { isShift = !isShift; renderKeyboard(); }
+
+    // Use event delegation for better touch support
+    document.addEventListener('focusin', (e) => {
+        if (e.target.classList.contains('vk-input')) {
+            activeInput = e.target;
+            document.getElementById('keyboard').style.display = 'block';
+        }
+    });
+
     function clearForm() { 
         const upc = document.getElementById('formUPC'); 
-        upc.value = ""; 
-        upc.readOnly = false; 
+        upc.value = ""; upc.readOnly = false; 
         document.getElementById('modalTitle').innerText = "Add New Item"; 
-        document.getElementById('formDesc').value = ""; 
-        document.getElementById('formMfg').value = ""; 
-        document.getElementById('formSize').value = ""; 
-        document.getElementById('formPrice').value = "2.50"; 
-        document.getElementById('formStock').value = "0"; 
-        document.getElementById('formCat').value = "Snacks"; 
-        document.getElementById('formQuick').checked = true;
-        setTimeout(() => { upc.focus(); }, 500);
+        document.getElementById('formDesc').value = ""; document.getElementById('formMfg').value = ""; 
+        document.getElementById('formSize').value = ""; document.getElementById('formPrice').value = "2.50"; 
+        document.getElementById('formStock').value = "0"; document.getElementById('formQuick').checked = true;
+        setTimeout(() => { upc.focus(); }, 500); 
     }
 
     function editProduct(p) { 
-        try { if (typeof p === "string") p = JSON.parse(p); } catch (e) {} 
         const upc = document.getElementById('formUPC'); 
-        upc.value = p?.upc_code ?? ""; 
-        upc.readOnly = true; 
+        upc.value = p?.upc_code ?? ""; upc.readOnly = true; 
         document.getElementById('modalTitle').innerText = "Item Details"; 
         document.getElementById('formCat').value = p?.category ?? "Snacks"; 
         document.getElementById('formMfg').value = p?.manufacturer ?? ""; 
@@ -78,7 +140,7 @@
         document.getElementById('formPrice').value = (p?.price ?? ""); 
         document.getElementById('formStock').value = (p?.stock_level ?? ""); 
         document.getElementById('formQuick').checked = !!p?.is_quick_item; 
-        setTimeout(() => { document.getElementById('formDesc').focus(); }, 500);
+        setTimeout(() => { document.getElementById('formDesc').focus(); }, 500); 
     }
 
     async function lookupProductManual(code) { 
@@ -95,6 +157,7 @@
             } 
         } catch (e) { console.error("Lookup failed", e); } 
     }
+    renderKeyboard();
 </script>
 </body>
 </html>

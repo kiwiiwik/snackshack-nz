@@ -10,23 +10,12 @@
         .user-tile { transition: 0.2s; border-radius: 15px; cursor: pointer; border: none; position: relative; }
         .user-tile:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
         .initial-avatar { width: 80px; height: 80px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.8rem; }
-        .pin-badge { position: absolute; top: 15px; right: 15px; color: #6c757d; font-size: 1.2rem; }
-        .admin-badge { position: absolute; top: 15px; left: 15px; color: #dc3545; font-size: 1.2rem; }
-        
-        /* Larger Category Tabs */
-        .nav-pills .nav-link { padding: 15px 30px; font-size: 1.2rem; font-weight: bold; border-radius: 12px; margin: 0 5px; color: #495057; background: #e9ecef; }
-        .nav-pills .nav-link.active { background-color: #0d6efd !th; box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3); }
-
-        /* Larger Product Cards */
-        .product-card { height: 100%; text-align: center; border: none; shadow: 0 4px 12px rgba(0,0,0,0.05); border-radius: 20px; padding: 20px; transition: 0.2s; }
-        .product-card:active { transform: scale(0.95); background-color: #f1f3f5; }
-        .product-img { width: 100%; height: 120px; object-fit: contain; padding: 5px; margin-bottom: 10px; }
-        .product-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; }
-        .price-text { color: #198754; font-weight: 800; font-size: 1.3rem; }
-        
-        .switchboard-btn { height: 200px; border-radius: 30px; font-size: 1.6rem; font-weight: bold; transition: 0.2s; border: none; width: 100%; color: white; }
-        .num-btn { height: 75px; font-size: 1.6rem; font-weight: bold; border-radius: 15px; border: 1px solid #dee2e6; background: white; }
-        .pin-input { font-size: 3rem; letter-spacing: 1.2rem; text-align: center; font-weight: bold; border-radius: 20px; }
+        .nav-pills .nav-link { padding: 15px 35px; font-size: 1.3rem; font-weight: bold; border-radius: 15px; margin: 0 8px; background: #e9ecef; color: #495057; border: 2px solid transparent; }
+        .nav-pills .nav-link.active { background-color: #0d6efd; color: white; border-color: #0a58ca; box-shadow: 0 4px 12px rgba(13,110,253,0.3); }
+        .product-card { border-radius: 20px; border: none; padding: 20px; transition: 0.2s; background: white; }
+        .product-img { width: 100%; height: 130px; object-fit: contain; margin-bottom: 15px; }
+        .price-text { color: #198754; font-weight: 800; font-size: 1.4rem; }
+        .switchboard-btn { height: 220px; border-radius: 35px; font-size: 1.8rem; font-weight: bold; border: none; width: 100%; color: white; }
         .version-tag { font-size: 0.7rem; color: #adb5bd; position: absolute; bottom: 15px; right: 20px; }
     </style>
 </head>
@@ -34,22 +23,15 @@
 
 <nav class="navbar navbar-light bg-white shadow-sm mb-5 py-3">
     <div class="container">
-        <a class="navbar-brand fw-bold fs-3" href="/">&#129373; Snack Shack</a>
+        <a class="navbar-brand fw-bold fs-2" href="/">&#129373; Snack Shack</a>
         {% if user %}
         <div class="d-flex align-items-center">
             {% if user.is_admin %}
-                <button class="btn btn-outline-dark me-3 fw-bold" data-bs-toggle="modal" data-bs-target="#switchboardModal"><i class="fas fa-user-shield me-1"></i> Admin</button>
+                <button class="btn btn-outline-dark btn-lg me-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#switchboardModal"><i class="fas fa-user-shield me-1"></i> Admin Tools</button>
             {% endif %}
-            <div class="me-3">
-                {% if user.pin %}
-                <form action="{{ url_for('main.pin_clear') }}" method="POST"><button type="submit" class="btn btn-outline-secondary fw-bold"><i class="fas fa-lock me-1"></i> PIN On</button></form>
-                {% else %}
-                <button class="btn btn-outline-secondary fw-bold" data-bs-toggle="modal" data-bs-target="#pinSetModal"><i class="fas fa-lock-open me-1"></i> PIN Off</button>
-                {% endif %}
-            </div>
-            <span class="me-3 fs-5">Hi, <strong>{{ user.first_name }}</strong></span>
-            <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-3 fs-5 me-3 shadow-sm">${{ "%.2f"|format(user.balance) }}</span>
-            <a href="{{ url_for('main.logout') }}" class="btn btn-danger fw-bold">Logout</a>
+            <span class="me-3 fs-4">Hi, <strong>{{ user.first_name }}</strong></span>
+            <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-3 fs-4 me-3 shadow-sm">${{ "%.2f"|format(user.balance) }}</span>
+            <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-lg fw-bold shadow-sm">Logout</a>
         </div>
         {% endif %}
     </div>
@@ -57,20 +39,19 @@
 
 <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-5 fs-5 fw-bold">{{ msg }}</div>{% endfor %}{% endif %}
+        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-5 fs-4 fw-bold py-4">{{ msg }}</div>{% endfor %}{% endif %}
     {% endwith %}
 
     {% if not user %}
-        <h2 class="text-center mb-5 text-secondary fw-bold">Who are you?</h2>
-        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4 mb-5">
+        <h1 class="text-center mb-5 text-dark fw-bold">Who are you?</h1>
+        <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4">
             {% for u in users %}
             <div class="col">
                 <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark">
                     <div class="card h-100 p-4 user-tile text-center shadow-sm">
-                        {% if u.is_admin %}<i class="fas fa-shield-alt admin-badge"></i>{% endif %}
-                        {% if u.pin %}<i class="fas fa-lock pin-badge"></i>{% endif %}
+                        {% if u.pin %}<i class="fas fa-lock pin-badge" style="position: absolute; top: 15px; right: 15px; color: #6c757d;"></i>{% endif %}
                         <div class="initial-avatar">{{ u.first_name[0] }}</div>
-                        <div class="fw-bold fs-5">{{ u.first_name }} {{ u.last_name }}</div>
+                        <div class="fw-bold fs-4">{{ u.first_name }} {{ u.last_name }}</div>
                     </div>
                 </a>
             </div>
@@ -83,64 +64,23 @@
         <div class="tab-content">
             {% for category, items in grouped_products.items() %}
             <div class="tab-pane fade {{ 'show active' if loop.first }}" id="cat-{{ loop.index }}"><div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-4 mb-4">
-                {% for p in items %}<div class="col"><a href="{{ url_for('main.manual_add', barcode=p.upc_code or 'MISSING') }}" class="text-decoration-none text-dark"><div class="card product-card shadow-sm"><span class="badge bg-light text-dark border mb-3 p-2">{{ p.stock_level }} left</span><img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img" onerror="this.src='/static/images/placeholder.png';"><div class="product-title">{{ p.description }}</div><div class="price-text">${{ "%.2f"|format(p.price) }}</div></div></a></div>{% endfor %}
+                {% for p in items %}<div class="col"><a href="{{ url_for('main.manual_add', barcode=p.upc_code or 'MISSING') }}" class="text-decoration-none text-dark"><div class="card product-card shadow-sm h-100"><span class="badge bg-light text-dark border mb-3 p-2 fs-6">{{ p.stock_level }} left</span><img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img" onerror="this.src='/static/images/placeholder.png';"><div class="fw-bold fs-5 mb-2">{{ p.description }}</div><div class="price-text">${{ "%.2f"|format(p.price) }}</div></div></a></div>{% endfor %}
             </div></div>
             {% endfor %}
         </div>
     {% endif %}
 </div>
 
-{% if just_bought %}<div class="fixed-bottom p-4 bg-white border-top shadow-lg"><div class="container d-flex justify-content-between align-items-center"><span class="fs-4">Purchased: <strong class="text-primary">{{ just_bought }}</strong></span><a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-lg px-5 py-3 fw-bold">Undo</a></div></div>{% endif %}
-
-<div class="modal fade" id="pinVerifyModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content shadow-lg border-0" action="{{ url_for('main.pin_verify') }}" method="POST" style="border-radius: 30px;">
-            <div class="modal-body p-5 text-center">
-                <h3 class="fw-bold mb-1">{{ pin_user.first_name if pin_user else 'Welcome' }}</h3>
-                <p class="text-muted mb-4 fs-5">Enter PIN</p>
-                <input type="hidden" name="user_id" value="{{ needs_pin }}">
-                <input type="password" id="pinVerifyInput" name="pin" class="form-control pin-input mb-4" readonly required>
-                <div class="row g-3">
-                    {% for n in ['1','2','3','4','5','6','7','8','9'] %}<div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pin-digit="{{ n }}">{{ n }}</button></div>{% endfor %}
-                    <div class="col-4"><button type="button" class="btn num-btn w-100 text-danger shadow-sm" id="pinVerifyClear"><i class="fas fa-times"></i></button></div>
-                    <div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pin-digit="0">0</button></div>
-                    <div class="col-4"><button type="submit" class="btn num-btn w-100 text-success shadow-sm"><i class="fas fa-check"></i></button></div>
-                </div>
-                <a href="/" class="btn btn-link mt-4 text-muted fs-5">Cancel</a>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="modal fade" id="pinSetModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content shadow-lg border-0" action="{{ url_for('main.pin_set') }}" method="POST" style="border-radius: 30px;">
-            <div class="modal-body p-5 text-center">
-                <h3 class="fw-bold mb-4">Choose a 4-digit PIN</h3>
-                <input type="password" id="pinSetInput" name="pin" class="form-control pin-input mb-4" readonly required>
-                <div class="row g-3">
-                    {% for n in ['1','2','3','4','5','6','7','8','9'] %}<div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pinset-digit="{{ n }}">{{ n }}</button></div>{% endfor %}
-                    <div class="col-4"><button type="button" class="btn num-btn w-100 text-danger shadow-sm" id="pinSetClear">C</button></div>
-                    <div class="col-4"><button type="button" class="btn num-btn w-100 shadow-sm" data-pinset-digit="0">0</button></div>
-                    <div class="col-4"><button type="submit" class="btn num-btn w-100 text-success shadow-sm">SAVE</button></div>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
 {% if user and user.is_admin %}
 <div class="modal fade" id="switchboardModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 30px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 40px;">
             <div class="modal-body p-5 text-center">
-                <h2 class="fw-bold mb-5">Admin Tools</h2>
-                <div class="mb-2">
-                    <a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center shadow text-decoration-none">
-                        <i class="fas fa-boxes mb-3 fa-2x"></i><br>MANAGE PRODUCTS
-                    </a>
-                </div>
-                <div class="version-tag">Kiosk v1.5.2</div>
+                <h1 class="fw-bold mb-5">Admin Tools</h1>
+                <a href="{{ url_for('main.manage_products') }}" class="btn switchboard-btn bg-dark d-flex flex-column align-items-center justify-content-center shadow-lg text-decoration-none">
+                    <i class="fas fa-boxes mb-4 fa-3x"></i><br>MANAGE PRODUCTS
+                </a>
+                <div class="version-tag">Kiosk v1.5.3</div>
             </div>
         </div>
     </div>
@@ -151,6 +91,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // 15-second activity timer
     {% if user %}
     let logoutTimer;
     function resetTimer() {
@@ -167,14 +108,6 @@
         {% if needs_pin %} new bootstrap.Modal(document.getElementById('pinVerifyModal')).show(); {% endif %}
         {% if user %} resetTimer(); {% endif %}
     };
-    function setupKeypad(attr, inputId, clearId) {
-        const input = document.getElementById(inputId);
-        if(!input) return;
-        document.querySelectorAll(`[${attr}]`).forEach(b => { b.onclick = () => { if(input.value.length < 4) input.value += b.getAttribute(attr); }; });
-        document.getElementById(clearId).onclick = () => input.value = "";
-    }
-    setupKeypad('data-pin-digit', 'pinVerifyInput', 'pinVerifyClear');
-    setupKeypad('data-pinset-digit', 'pinSetInput', 'pinSetClear');
 </script>
 </body>
 </html>
