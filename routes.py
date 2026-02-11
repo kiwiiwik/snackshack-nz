@@ -40,7 +40,9 @@ def index():
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
     
-    # Simple category grouping for the storefront
+    # Alphabetical sorting for 80+ names
+    all_users = Users.query.order_by(Users.first_name.asc()).all()
+    
     cat_order = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
     grouped = {cat: [] for cat in cat_order}
     for p in Products.query.filter_by(is_quick_item=True).all():
@@ -49,13 +51,11 @@ def index():
         
     return render_template('index.html', 
         user=current_user, 
-        users=Users.query.order_by(Users.last_seen.desc()).limit(30).all(), 
+        users=all_users, 
         grouped_products={k: v for k, v in grouped.items() if v}, 
         needs_pin=needs_pin, 
         pin_user=pin_user, 
         just_bought=request.args.get('bought'))
-
-# --- STOREFRONT LOGIC ---
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
@@ -79,8 +79,6 @@ def undo():
             db.session.delete(lt); db.session.commit()
     return redirect(url_for('main.index'))
 
-# --- PRODUCT MANAGEMENT (RETAINED) ---
-
 @main.route('/admin/products')
 def manage_products():
     if 'user_id' not in session: return redirect(url_for('main.index'))
@@ -102,10 +100,8 @@ def delete_product(upc):
     p = Products.query.get(upc)
     if p:
         try: db.session.delete(p); db.session.commit()
-        except IntegrityError: db.session.rollback(); flash("Sales history exists; delete blocked.", "danger")
+        except IntegrityError: db.session.rollback(); flash("History exists; delete failed.", "danger")
     return redirect(url_for('main.manage_products'))
-
-# --- SECURITY & SESSIONS ---
 
 @main.route('/pin_verify', methods=['POST'])
 def pin_verify():
