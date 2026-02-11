@@ -7,81 +7,83 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #fcfcfc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; padding-top: 160px; scroll-behavior: smooth; }
+        body { background-color: #fcfcfc; font-family: 'Segoe UI', system-ui, sans-serif; padding-top: 180px; scroll-behavior: smooth; }
         
-        /* Sticky Header Logic */
-        .fixed-header { position: fixed; top: 0; left: 0; right: 0; z-index: 1030; background: white; border-bottom: 1px solid #eee; }
+        /* Fixed Header - Stronger Visibility */
+        .fixed-header { position: fixed; top: 0; left: 0; right: 0; z-index: 2000; background: white; border-bottom: 2px solid #eee; }
         
-        /* Category Quick-Nav */
+        /* Identity Banner */
+        .user-identity-banner { background: #0d6efd; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .user-identity-banner strong { font-size: 1.2rem; }
+
+        /* Alphabet Jump Bar - Explicit Height and Z-Index */
+        .alphabet-nav { display: flex; overflow-x: auto; padding: 15px; gap: 8px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; scrollbar-width: none; position: relative; z-index: 2001; }
+        .alphabet-nav::-webkit-scrollbar { display: none; }
+        .letter-link { min-width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border: 2px solid #0d6efd; border-radius: 12px; text-decoration: none; color: #0d6efd; font-weight: bold; font-size: 1.2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .letter-link:active { background: #0d6efd; color: white; }
+
+        /* Category Nav */
         .category-nav { display: flex; overflow-x: auto; white-space: nowrap; padding: 15px 10px; gap: 10px; background: #fff; scrollbar-width: none; }
-        .category-nav::-webkit-scrollbar { display: none; }
-        .nav-chip { padding: 10px 25px; background: #f1f3f5; border-radius: 50px; text-decoration: none; color: #495057; font-weight: 600; font-size: 1rem; border: 2px solid transparent; transition: 0.2s; }
-        .nav-chip:active { background: #0d6efd; color: white; }
+        .nav-chip { padding: 12px 25px; background: #e9ecef; border-radius: 50px; text-decoration: none; color: #495057; font-weight: 700; border: 2px solid transparent; }
 
-        /* Modern Tank-style Cards */
-        .section-title { font-weight: 800; font-size: 1.8rem; margin: 40px 0 20px; padding-left: 10px; border-left: 5px solid #0d6efd; }
-        .product-card { background: white; border-radius: 25px; border: 1px solid #f0f0f0; box-shadow: 0 4px 15px rgba(0,0,0,0.03); padding: 20px; height: 100%; display: flex; flex-direction: column; justify-content: space-between; transition: 0.3s; }
-        .product-card:active { transform: scale(0.97); background: #f8f9fa; }
-        
-        .card-top { display: flex; gap: 15px; margin-bottom: 15px; }
-        .card-info { flex: 1; }
-        .card-visual { width: 100px; text-align: center; }
-        .product-img { width: 100%; height: 100px; object-fit: contain; }
-        
-        .product-title { font-weight: 700; font-size: 1.2rem; color: #212529; margin-bottom: 5px; line-height: 1.2; }
-        .product-price { font-weight: 800; font-size: 1.4rem; color: #198754; }
-        
-        .purchase-btn { background: #0d6efd; color: white; border: none; border-radius: 15px; padding: 12px; font-weight: 700; width: 100%; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; }
+        /* User Tiles */
+        .initial-avatar { width: 80px; height: 80px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; font-weight: bold; font-size: 1.8rem; }
+        .user-tile { border-radius: 25px; border: none; background: white; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .user-tile:active { transform: scale(0.95); background: #f1f3f5; }
 
-        .initial-avatar { width: 70px; height: 70px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; font-size: 1.5rem; }
-        .user-tile { border-radius: 20px; border: none; transition: 0.2s; background: white; }
-        .user-tile:active { transform: scale(0.95); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
-        .version-tag { font-size: 0.7rem; color: #ced4da; text-align: center; padding: 40px 0; }
+        /* Product Cards */
+        .section-title { font-weight: 800; font-size: 2rem; margin: 50px 0 25px; padding-left: 15px; border-left: 8px solid #0d6efd; }
+        .product-card { background: white; border-radius: 25px; border: 1px solid #eee; box-shadow: 0 5px 15px rgba(0,0,0,0.04); padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
+        .purchase-btn { background: #0d6efd; color: white; border: none; border-radius: 20px; padding: 16px; font-weight: 800; width: 100%; text-transform: uppercase; font-size: 1.1rem; }
+        
+        .version-tag { font-size: 0.7rem; color: #ced4da; text-align: center; padding: 60px 0; }
     </style>
 </head>
 <body>
 
-<div class="fixed-header shadow-sm">
-    <nav class="navbar navbar-light bg-white px-3 border-bottom">
-        <a class="navbar-brand fw-bold fs-3" href="/">&#129373; Snack Shack</a>
+<div class="fixed-header shadow">
+    <nav class="navbar navbar-light bg-white px-3">
+        <a class="navbar-brand fw-bold fs-2" href="/">&#129373; Snack Shack</a>
         {% if user %}
         <div class="d-flex align-items-center">
-            {% if user.is_admin %}
-                <button class="btn btn-outline-dark me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#switchboardModal">Admin</button>
-            {% endif %}
-            <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 fs-6 me-2 shadow-sm">${{ "%.2f"|format(user.balance) }}</span>
-            <a href="{{ url_for('main.logout') }}" class="btn btn-sm btn-danger fw-bold">Exit</a>
+            <span class="me-3 fs-5">Active: <strong class="text-primary">{{ user.first_name }} {{ user.last_name }}</strong></span>
+            <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-3 fs-5 me-3 shadow-sm">${{ "%.2f"|format(user.balance) }}</span>
+            <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-lg fw-bold">Logout</a>
         </div>
         {% endif %}
     </nav>
     
-    {% if user %}
-    <div class="category-nav">
-        {% for category in grouped_products.keys() %}
-            <a href="#cat-{{ loop.index }}" class="nav-chip">{{ category }}</a>
-        {% endfor %}
-    </div>
+    {% if not user %}
+        <div class="alphabet-nav">
+            {% for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"|list %}
+                <a href="#letter-{{ char }}" class="letter-link shadow-sm">{{ char }}</a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="category-nav shadow-sm">
+            {% for category in grouped_products.keys() %}
+                <a href="#cat-{{ loop.index }}" class="nav-chip">{{ category }}</a>
+            {% endfor %}
+        </div>
     {% endif %}
 </div>
 
 <div class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for cat, msg in messages %}<div class="alert alert-{{ cat }} shadow-sm text-center mb-4 fs-5 fw-bold">{{ msg }}</div>{% endfor %}{% endif %}
-    {% endwith %}
-
     {% if not user %}
-        <h2 class="text-center mb-5 text-secondary fw-bold">Choose your card</h2>
+        <h1 class="text-center mb-5 text-dark fw-bold">Who are you?</h1>
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4 mb-5">
+            {% set ns = namespace(last_char='') %}
             {% for u in users %}
-            <div class="col">
-                <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark">
-                    <div class="card h-100 p-4 user-tile text-center shadow-sm">
-                        {% if u.pin %}<i class="fas fa-lock" style="position: absolute; top: 15px; right: 15px; color: #adb5bd;"></i>{% endif %}
-                        <div class="initial-avatar">{{ u.first_name[0] }}</div>
-                        <div class="fw-bold">{{ u.first_name }} {{ u.last_name }}</div>
-                    </div>
-                </a>
-            </div>
+                {% set current_char = u.first_name[0]|upper %}
+                <div class="col" {% if current_char != ns.last_char %}id="letter-{{ current_char }}"{% endif %}>
+                    <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark">
+                        <div class="card h-100 p-4 user-tile text-center shadow-sm">
+                            <div class="initial-avatar">{{ u.first_name[0] }}</div>
+                            <div class="fw-bold fs-4">{{ u.first_name }} {{ u.last_name }}</div>
+                        </div>
+                    </a>
+                </div>
+                {% set ns.last_char = current_char %}
             {% endfor %}
         </div>
     {% else %}
@@ -91,20 +93,18 @@
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
                     {% for p in items %}
                     <div class="col">
-                        <div class="product-card">
-                            <div class="card-top">
-                                <div class="card-info">
-                                    <div class="product-title">{{ p.description }}</div>
-                                    <div class="small text-muted mb-2">{{ p.manufacturer or 'Snack Shack' }} {{ p.size or '' }}</div>
-                                    <div class="product-price">${{ "%.2f"|format(p.price) }}</div>
+                        <div class="product-card h-100">
+                            <div class="d-flex justify-content-between mb-4">
+                                <div>
+                                    <div class="fw-bold fs-4 mb-1">{{ p.description }}</div>
+                                    <div class="text-success fw-bold fs-3">${{ "%.2f"|format(p.price) }}</div>
                                 </div>
-                                <div class="card-visual">
-                                    <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" class="product-img" onerror="this.src='/static/images/placeholder.png';">
-                                    <span class="badge bg-light text-dark border mt-2">{{ p.stock_level }} left</span>
+                                <div class="text-end">
+                                    <span class="badge bg-light text-dark border p-2 fs-6">{{ p.stock_level }} left</span>
                                 </div>
                             </div>
                             <a href="{{ url_for('main.manual_add', barcode=p.upc_code or 'MISSING') }}" class="text-decoration-none">
-                                <button class="purchase-btn shadow-sm">Buy Now</button>
+                                <button class="purchase-btn shadow">Purchase</button>
                             </a>
                         </div>
                     </div>
@@ -112,85 +112,21 @@
                 </div>
             </div>
         {% endfor %}
-        <div class="version-tag">Storefront v1.6.0</div>
+        <div class="version-tag">Kiosk v1.6.2</div>
     {% endif %}
 </div>
 
-{% if just_bought %}
-<div class="fixed-bottom p-4 bg-white border-top shadow-lg" style="z-index: 1040;">
-    <div class="container d-flex justify-content-between align-items-center">
-        <span class="fs-4">Added: <strong class="text-primary">{{ just_bought }}</strong></span>
-        <a href="{{ url_for('main.undo') }}" class="btn btn-dark btn-lg px-5 py-3 fw-bold">Undo Purchase</a>
-    </div>
-</div>
-{% endif %}
-
-{% if needs_pin %}
-<div class="modal fade" id="pinVerifyModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <form class="modal-content shadow-lg border-0" action="{{ url_for('main.pin_verify') }}" method="POST" style="border-radius: 30px;">
-            <div class="modal-body p-5 text-center">
-                <h3 class="fw-bold mb-1">{{ pin_user.first_name if pin_user else 'Welcome' }}</h3>
-                <p class="text-muted mb-4">Enter 4-digit PIN</p>
-                <input type="hidden" name="user_id" value="{{ needs_pin }}">
-                <input type="password" id="pinVerifyInput" name="pin" class="form-control mb-4 text-center fs-1 fw-bold" style="letter-spacing: 1rem; border-radius: 15px;" readonly required>
-                <div class="row g-2">
-                    {% for n in ['1','2','3','4','5','6','7','8','9'] %}<div class="col-4"><button type="button" class="btn btn-light w-100 py-3 fs-3 fw-bold border" data-pin-digit="{{ n }}">{{ n }}</button></div>{% endfor %}
-                    <div class="col-4"><button type="button" class="btn btn-light w-100 py-3 fs-3 fw-bold border text-danger" id="pinVerifyClear">C</button></div>
-                    <div class="col-4"><button type="button" class="btn btn-light w-100 py-3 fs-3 fw-bold border" data-pin-digit="0">0</button></div>
-                    <div class="col-4"><button type="submit" class="btn btn-success w-100 py-3 fs-3 fw-bold border"><i class="fas fa-check"></i></button></div>
-                </div>
-                <a href="/" class="btn btn-link mt-4 text-muted">Cancel</a>
-            </div>
-        </form>
-    </div>
-</div>
-{% endif %}
-
-{% if user and user.is_admin %}
-<div class="modal fade" id="switchboardModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 40px;">
-            <div class="modal-body p-5 text-center">
-                <h1 class="fw-bold mb-5">Admin Tools</h1>
-                <a href="{{ url_for('main.manage_products') }}" class="btn btn-dark w-100 py-4 fs-3 fw-bold rounded-pill shadow-lg text-decoration-none">
-                    <i class="fas fa-boxes mb-2"></i><br>MANAGE PRODUCTS
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
-
-<div style="display: none;"><form action="{{ url_for('main.scan') }}" method="POST"><input type="text" name="barcode" id="barcode" autofocus autocomplete="off"></form></div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // 15-second activity timer
     {% if user %}
     let logoutTimer;
     function resetTimer() {
         clearTimeout(logoutTimer);
-        if (document.querySelector('.modal.show')) return;
         logoutTimer = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 15000); 
     }
-    ['mousemove', 'mousedown', 'touchstart', 'click', 'keydown'].forEach(evt => window.addEventListener(evt, resetTimer, false));
-    document.addEventListener('hidden.bs.modal', resetTimer);
+    ['mousedown', 'touchstart', 'click', 'keydown'].forEach(evt => window.addEventListener(evt, resetTimer, false));
+    resetTimer();
     {% endif %}
-
-    window.onload = () => { 
-        if (new URLSearchParams(window.location.search).get('open_admin')) { new bootstrap.Modal(document.getElementById('switchboardModal')).show(); } 
-        {% if needs_pin %} new bootstrap.Modal(document.getElementById('pinVerifyModal')).show(); {% endif %}
-        {% if user %} resetTimer(); {% endif %}
-    };
-
-    function setupKeypad(attr, inputId, clearId) {
-        const input = document.getElementById(inputId);
-        if(!input) return;
-        document.querySelectorAll(`[${attr}]`).forEach(b => { b.onclick = () => { if(input.value.length < 4) input.value += b.getAttribute(attr); }; });
-        document.getElementById(clearId).onclick = () => input.value = "";
-    }
-    setupKeypad('data-pin-digit', 'pinVerifyInput', 'pinVerifyClear');
 </script>
 </body>
 </html>
