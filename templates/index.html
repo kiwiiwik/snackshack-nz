@@ -7,35 +7,32 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #fcfcfc; font-family: 'Segoe UI', system-ui, sans-serif; padding-top: 180px; scroll-behavior: smooth; }
-        
-        /* Fixed Header - Stronger Visibility */
+        body { background-color: #fcfcfc; font-family: 'Segoe UI', system-ui, sans-serif; padding-top: 190px; scroll-behavior: smooth; }
         .fixed-header { position: fixed; top: 0; left: 0; right: 0; z-index: 2000; background: white; border-bottom: 2px solid #eee; }
         
-        /* Identity Banner */
-        .user-identity-banner { background: #0d6efd; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .user-identity-banner strong { font-size: 1.2rem; }
-
-        /* Alphabet Jump Bar - Explicit Height and Z-Index */
-        .alphabet-nav { display: flex; overflow-x: auto; padding: 15px; gap: 8px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; scrollbar-width: none; position: relative; z-index: 2001; }
+        .alphabet-nav { display: flex; overflow-x: auto; padding: 15px; gap: 8px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; scrollbar-width: none; }
         .alphabet-nav::-webkit-scrollbar { display: none; }
-        .letter-link { min-width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border: 2px solid #0d6efd; border-radius: 12px; text-decoration: none; color: #0d6efd; font-weight: bold; font-size: 1.2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .letter-link:active { background: #0d6efd; color: white; }
+        .letter-link { min-width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border: 2px solid #0d6efd; border-radius: 12px; text-decoration: none; color: #0d6efd; font-weight: bold; font-size: 1.2rem; }
 
-        /* Category Nav */
         .category-nav { display: flex; overflow-x: auto; white-space: nowrap; padding: 15px 10px; gap: 10px; background: #fff; scrollbar-width: none; }
-        .nav-chip { padding: 12px 25px; background: #e9ecef; border-radius: 50px; text-decoration: none; color: #495057; font-weight: 700; border: 2px solid transparent; }
+        .nav-chip { padding: 12px 25px; background: #e9ecef; border-radius: 50px; text-decoration: none; color: #495057; font-weight: 700; }
 
-        /* User Tiles */
-        .initial-avatar { width: 80px; height: 80px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; font-weight: bold; font-size: 1.8rem; }
-        .user-tile { border-radius: 25px; border: none; background: white; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .user-tile:active { transform: scale(0.95); background: #f1f3f5; }
-
-        /* Product Cards */
-        .section-title { font-weight: 800; font-size: 2rem; margin: 50px 0 25px; padding-left: 15px; border-left: 8px solid #0d6efd; }
-        .product-card { background: white; border-radius: 25px; border: 1px solid #eee; box-shadow: 0 5px 15px rgba(0,0,0,0.04); padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
-        .purchase-btn { background: #0d6efd; color: white; border: none; border-radius: 20px; padding: 16px; font-weight: 800; width: 100%; text-transform: uppercase; font-size: 1.1rem; }
+        /* User Tile & Badges */
+        .user-tile { border-radius: 25px; border: none; background: white; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; transition: 0.2s; }
+        .user-tile:active { transform: scale(0.95); background: #0d6efd; color: white !important; }
         
+        /* Fixed Badge Positions */
+        .badge-lock { position: absolute; top: 15px; right: 15px; color: #adb5bd; font-size: 1.2rem; }
+        .badge-admin { position: absolute; top: 15px; left: 15px; color: #0d6efd; font-size: 1.2rem; }
+        .user-tile:active .badge-lock, .user-tile:active .badge-admin { color: white; }
+
+        .initial-avatar { width: 80px; height: 80px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; font-weight: bold; font-size: 1.8rem; }
+        
+        .section-title { font-weight: 800; font-size: 2rem; margin: 50px 0 25px; padding-left: 15px; border-left: 8px solid #0d6efd; }
+        .product-card { background: white; border-radius: 25px; border: 1px solid #eee; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
+        .purchase-btn { background: #0d6efd; color: white; border: none; border-radius: 20px; padding: 16px; font-weight: 800; width: 100%; text-transform: uppercase; }
+        
+        .anchor-point { display: block; position: relative; top: -190px; visibility: hidden; }
         .version-tag { font-size: 0.7rem; color: #ced4da; text-align: center; padding: 60px 0; }
     </style>
 </head>
@@ -56,11 +53,11 @@
     {% if not user %}
         <div class="alphabet-nav">
             {% for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"|list %}
-                <a href="#letter-{{ char }}" class="letter-link shadow-sm">{{ char }}</a>
+                <a href="#letter-{{ char }}" class="letter-link">{{ char }}</a>
             {% endfor %}
         </div>
     {% else %}
-        <div class="category-nav shadow-sm">
+        <div class="category-nav">
             {% for category in grouped_products.keys() %}
                 <a href="#cat-{{ loop.index }}" class="nav-chip">{{ category }}</a>
             {% endfor %}
@@ -70,20 +67,26 @@
 
 <div class="container">
     {% if not user %}
-        <h1 class="text-center mb-5 text-dark fw-bold">Who are you?</h1>
+        <h1 class="text-center mb-5 text-dark fw-bold">Select Your Name</h1>
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4 mb-5">
             {% set ns = namespace(last_char='') %}
             {% for u in users %}
                 {% set current_char = u.first_name[0]|upper %}
-                <div class="col" {% if current_char != ns.last_char %}id="letter-{{ current_char }}"{% endif %}>
-                    <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark">
+                <div class="col position-relative">
+                    {% if current_char != ns.last_char %}
+                        <span id="letter-{{ current_char }}" class="anchor-point"></span>
+                        {% set ns.last_char = current_char %}
+                    {% endif %}
+                    
+                    <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark d-block h-100">
                         <div class="card h-100 p-4 user-tile text-center shadow-sm">
+                            {% if u.is_admin %}<i class="fas fa-user-shield badge-admin"></i>{% endif %}
+                            {% if u.pin %}<i class="fas fa-lock badge-lock"></i>{% endif %}
                             <div class="initial-avatar">{{ u.first_name[0] }}</div>
                             <div class="fw-bold fs-4">{{ u.first_name }} {{ u.last_name }}</div>
                         </div>
                     </a>
                 </div>
-                {% set ns.last_char = current_char %}
             {% endfor %}
         </div>
     {% else %}
@@ -112,7 +115,7 @@
                 </div>
             </div>
         {% endfor %}
-        <div class="version-tag">Kiosk v1.6.2</div>
+        <div class="version-tag">Kiosk v1.6.4</div>
     {% endif %}
 </div>
 
