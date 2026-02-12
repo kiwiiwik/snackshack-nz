@@ -37,7 +37,8 @@ class Products(db.Model):
             'price': float(self.price) if self.price else 0.0,
             'stock_level': self.stock_level or 0,
             'is_quick_item': self.is_quick_item,
-            'category': self.category or "Snacks"
+            'category': self.category or "Snacks",
+            'image_url': self.image_url or ""
         }
 
 class Transactions(db.Model):

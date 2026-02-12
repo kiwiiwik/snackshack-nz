@@ -45,7 +45,7 @@
 
 <div class="modal fade" id="editModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <form action="{{ url_for('main.save_product_manual') }}" method="POST" class="modal-content shadow-lg border-0" style="border-radius: 20px; overflow: hidden;">
+        <form action="{{ url_for('main.save_product_manual') }}" method="POST" enctype="multipart/form-data" class="modal-content shadow-lg border-0" style="border-radius: 20px; overflow: hidden;">
             <div class="modal-header border-0 pb-0"><h5 class="fw-bold" id="modalTitle">Item Details</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">UPC / PLU CODE</label>
@@ -66,6 +66,14 @@
                     <div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Current Stock</label><input type="number" name="stock_level" id="formStock" class="form-control vk-input"></div>
                 </div>
                 <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" name="is_quick_item" id="formQuick"><label class="form-check-label small fw-bold" for="formQuick">Show on Kiosk Menu</label></div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Product Image</label>
+                    <div id="imagePreviewBox" class="text-center mb-2" style="display:none;">
+                        <img id="imagePreview" src="" alt="Preview" style="max-width:120px;max-height:120px;object-fit:contain;border:1px solid #dee2e6;border-radius:8px;padding:4px;">
+                    </div>
+                    <input type="file" name="product_image" id="formImage" class="form-control" accept="image/png,image/jpeg,image/gif,image/webp">
+                    <div class="form-text">PNG, JPG, GIF or WebP. Max 2 MB.</div>
+                </div>
                 <button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold mb-2">SAVE CHANGES</button>
             </div>
             
@@ -119,29 +127,50 @@
         }
     });
 
-    function clearForm() { 
-        const upc = document.getElementById('formUPC'); 
-        upc.value = ""; upc.readOnly = false; 
-        document.getElementById('modalTitle').innerText = "Add New Item"; 
-        document.getElementById('formDesc').value = ""; document.getElementById('formMfg').value = ""; 
-        document.getElementById('formSize').value = ""; document.getElementById('formPrice').value = "2.50"; 
+    function clearForm() {
+        const upc = document.getElementById('formUPC');
+        upc.value = ""; upc.readOnly = false;
+        document.getElementById('modalTitle').innerText = "Add New Item";
+        document.getElementById('formDesc').value = ""; document.getElementById('formMfg').value = "";
+        document.getElementById('formSize').value = ""; document.getElementById('formPrice').value = "2.50";
         document.getElementById('formStock').value = "0"; document.getElementById('formQuick').checked = true;
-        setTimeout(() => { upc.focus(); }, 500); 
+        document.getElementById('formImage').value = "";
+        document.getElementById('imagePreviewBox').style.display = "none";
+        setTimeout(() => { upc.focus(); }, 500);
     }
 
-    function editProduct(p) { 
-        const upc = document.getElementById('formUPC'); 
-        upc.value = p?.upc_code ?? ""; upc.readOnly = true; 
-        document.getElementById('modalTitle').innerText = "Item Details"; 
-        document.getElementById('formCat').value = p?.category ?? "Snacks"; 
-        document.getElementById('formMfg').value = p?.manufacturer ?? ""; 
-        document.getElementById('formDesc').value = p?.description ?? ""; 
-        document.getElementById('formSize').value = p?.size ?? ""; 
-        document.getElementById('formPrice').value = (p?.price ?? ""); 
-        document.getElementById('formStock').value = (p?.stock_level ?? ""); 
-        document.getElementById('formQuick').checked = !!p?.is_quick_item; 
-        setTimeout(() => { document.getElementById('formDesc').focus(); }, 500); 
+    function editProduct(p) {
+        const upc = document.getElementById('formUPC');
+        upc.value = p?.upc_code ?? ""; upc.readOnly = true;
+        document.getElementById('modalTitle').innerText = "Item Details";
+        document.getElementById('formCat').value = p?.category ?? "Snacks";
+        document.getElementById('formMfg').value = p?.manufacturer ?? "";
+        document.getElementById('formDesc').value = p?.description ?? "";
+        document.getElementById('formSize').value = p?.size ?? "";
+        document.getElementById('formPrice').value = (p?.price ?? "");
+        document.getElementById('formStock').value = (p?.stock_level ?? "");
+        document.getElementById('formQuick').checked = !!p?.is_quick_item;
+        document.getElementById('formImage').value = "";
+        if (p?.image_url) {
+            document.getElementById('imagePreview').src = "/static/images/" + p.image_url;
+            document.getElementById('imagePreviewBox').style.display = "block";
+        } else {
+            document.getElementById('imagePreviewBox').style.display = "none";
+        }
+        setTimeout(() => { document.getElementById('formDesc').focus(); }, 500);
     }
+
+    document.getElementById('formImage').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                document.getElementById('imagePreview').src = ev.target.result;
+                document.getElementById('imagePreviewBox').style.display = "block";
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 
     async function lookupProductManual(code) { 
         if (!code || document.getElementById('formUPC').readOnly) return; 

@@ -1,9 +1,16 @@
+import os
 import requests
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
+from werkzeug.utils import secure_filename
 from models import db, Users, Products, Transactions
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 main = Blueprint('main', __name__)
 
@@ -92,6 +99,16 @@ def save_product_manual():
     p.manufacturer, p.description, p.size = request.form.get('manufacturer'), request.form.get('description'), request.form.get('size')
     p.price, p.category, p.stock_level = Decimal(request.form.get('price', '0.00')), request.form.get('category'), int(request.form.get('stock_level', 0))
     p.is_quick_item = 'is_quick_item' in request.form
+
+    file = request.files.get('product_image')
+    if file and file.filename and allowed_file(file.filename):
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        filename = secure_filename(f"{upc}.{ext}")
+        upload_dir = os.path.join(current_app.static_folder, 'images')
+        os.makedirs(upload_dir, exist_ok=True)
+        file.save(os.path.join(upload_dir, filename))
+        p.image_url = filename
+
     db.session.commit()
     return redirect(url_for('main.manage_products'))
 
