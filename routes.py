@@ -1,4 +1,8 @@
 import os
+import smtplib
+import threading
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
 from werkzeug.utils import secure_filename
@@ -13,6 +17,42 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 main = Blueprint('main', __name__)
+
+def send_purchase_email(app, user_email, user_name, product_desc, price, new_balance):
+    """Send purchase notification email via SMTP2Go in a background thread."""
+    def _send():
+        with app.app_context():
+            smtp_host = os.environ.get('SMTP_HOST', 'mail.smtp2go.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', 2525))
+            smtp_user = os.environ.get('SMTP_USER', '')
+            smtp_pass = os.environ.get('SMTP_PASS', '')
+            smtp_from = os.environ.get('SMTP_FROM', smtp_user)
+            if not smtp_user or not smtp_pass:
+                return
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f"Snackshack Purchase: {product_desc}"
+            msg['From'] = smtp_from
+            msg['To'] = user_email
+            body = f"""Hi {user_name},
+
+A purchase was just recorded on your Snackshack account:
+
+  Item: {product_desc}
+  Amount: ${price:.2f}
+  New Balance: ${new_balance:.2f}
+
+If this wasn't you, please speak to an admin.
+
+- Claudes Snackshack"""
+            msg.attach(MIMEText(body, 'plain'))
+            try:
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.sendmail(smtp_from, user_email, msg.as_string())
+            except Exception:
+                pass  # Don't break purchases if email fails
+    threading.Thread(target=_send, daemon=True).start()
 
 def process_barcode(barcode):
     if not barcode: return {"status": "not_found"}
@@ -36,6 +76,8 @@ def process_barcode(barcode):
             product.stock_level = (product.stock_level or 0) - 1
             db.session.add(Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price))
             db.session.commit()
+            if u.email and u.notify_on_purchase:
+                send_purchase_email(current_app._get_current_object(), u.email, u.first_name, product.description, float(price), float(u.balance))
             return {"status": "purchased", "description": product.description}
     return {"status": "not_found"}
 
@@ -139,6 +181,17 @@ def pin_clear():
     if 'user_id' in session:
         u = Users.query.get(int(session['user_id']))
         if u: u.pin = None; db.session.commit(); flash("PIN removed.", "info")
+    return redirect(url_for('main.index'))
+
+@main.route('/email_settings', methods=['POST'])
+def email_settings():
+    if 'user_id' in session:
+        u = Users.query.get(int(session['user_id']))
+        if u:
+            u.email = request.form.get('email', '').strip() or None
+            u.notify_on_purchase = 'notify_on_purchase' in request.form
+            db.session.commit()
+            flash("Email settings saved.", "success")
     return redirect(url_for('main.index'))
 
 @main.route('/logout')
