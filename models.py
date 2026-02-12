@@ -15,6 +15,16 @@ class Users(db.Model):
     email = db.Column('Email_Address', db.String(100))
     is_admin = db.Column('Is_Admin', db.Boolean, default=False)
 
+    def to_dict(self):
+        return {
+            'user_id': self.user_id,
+            'first_name': self.first_name or "",
+            'last_name': self.last_name or "",
+            'card_id': self.card_id or "",
+            'balance': float(self.balance) if self.balance else 0.0,
+            'is_admin': self.is_admin
+        }
+
 class Products(db.Model):
     __tablename__ = 'Products'
     upc_code = db.Column('UPC_Code', db.String(50), primary_key=True)

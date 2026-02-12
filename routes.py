@@ -151,6 +151,74 @@ def select_user(user_id):
     if u: session['user_id'] = u.user_id; u.last_seen = datetime.utcnow(); db.session.commit()
     return redirect(url_for('main.index'))
 
+# --- ADMIN USER MANAGEMENT ---
+
+@main.route('/admin/users')
+def manage_users():
+    if 'user_id' not in session: return redirect(url_for('main.index'))
+    return render_template('manage_users.html', users=Users.query.order_by(Users.last_name).all())
+
+@main.route('/admin/user/save', methods=['POST'])
+def save_user():
+    uid = request.form.get('user_id')
+    user = Users.query.get(int(uid)) if uid else Users(card_id=request.form.get('card_id', '').strip())
+    if not uid: db.session.add(user)
+    user.first_name, user.last_name = request.form.get('first_name'), request.form.get('last_name')
+    user.is_admin = 'is_admin' in request.form
+    db.session.commit()
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/user/delete/<int:user_id>')
+def delete_user(user_id):
+    user = Users.query.get(user_id)
+    if user and int(session.get('user_id')) != user_id:
+        try:
+            db.session.delete(user); db.session.commit()
+        except IntegrityError:
+            db.session.rollback(); flash("User has history; delete failed.", "danger")
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/user/payment', methods=['POST'])
+def record_payment():
+    uid, amount = request.form.get('user_id'), Decimal(request.form.get('amount', '0.00'))
+    user = Users.query.get(int(uid))
+    if user:
+        user.balance = Decimal(str(user.balance or 0.0)) + amount
+        db.session.add(Transactions(user_id=user.user_id, upc_code='PAYMENT', amount=-amount))
+        db.session.commit()
+        flash(f"Balance updated.", "success")
+    return redirect(url_for('main.manage_users'))
+
+# --- REPORTING ---
+
+@main.route('/admin/monthly_report')
+def monthly_report():
+    ym = request.args.get('month', datetime.utcnow().strftime("%Y-%m"))
+    start_dt = datetime.strptime(ym, "%Y-%m")
+    end_dt = datetime(start_dt.year + (1 if start_dt.month == 12 else 0), (start_dt.month % 12) + 1, 1)
+    tx_rows = db.session.query(Transactions, Products).outerjoin(Products, Products.upc_code == Transactions.upc_code).filter(Transactions.transaction_date >= start_dt, Transactions.transaction_date < end_dt).all()
+    rows = []
+    for u in Users.query.order_by(Users.last_name).all():
+        user_txs = [(t, p) for t, p in tx_rows if t.user_id == u.user_id]
+        spent = sum(float(t.amount or 0) for t, p in user_txs)
+        end_balance = float(u.balance or 0)
+        start_balance = end_balance + spent
+        txs = [{"when": t.transaction_date.strftime("%d %b %H:%M"), "desc": p.description if p else "Payment", "amount": float(t.amount or 0)} for t, p in user_txs]
+        rows.append({"user": u, "spent": spent, "end_balance": end_balance, "start_balance": start_balance, "txs": txs})
+    return render_template("monthly_report.html", rows=rows, selected_month=ym, month_label=start_dt.strftime("%B %Y"), start_iso=start_dt.strftime("%Y-%m-%d"), end_iso=end_dt.strftime("%Y-%m-%d"))
+
+# --- DANGER ZONE ---
+
+@main.route('/admin/nuke-transactions')
+def nuke_transactions():
+    Transactions.query.delete(); db.session.commit(); flash("HISTORY NUKED.", "danger")
+    return redirect(url_for('main.index'))
+
+@main.route('/admin/reset-balances')
+def reset_balances():
+    Users.query.update({Users.balance: 0.00}); db.session.commit(); flash("Balances reset.", "warning")
+    return redirect(url_for('main.index'))
+
 @main.route('/admin/get-product/<barcode>')
 def get_product(barcode):
     p = Products.query.get(barcode.strip())
