@@ -96,7 +96,11 @@
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
                     {% for p in items %}
                     <div class="col">
-                        <div class="product-card h-100">
+                        <div class="product-card h-100 text-center">
+                            <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}"
+                                 class="product-img mb-3"
+                                 onerror="this.src='/static/images/placeholder.png';"
+                                 alt="{{ p.description }}">
                             <div class="d-flex justify-content-between mb-4">
                                 <div>
                                     <div class="fw-bold fs-4 mb-1">{{ p.description }}</div>

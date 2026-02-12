@@ -38,6 +38,9 @@ h1 { color: #2c3e50; margin-bottom: 20px; font-size: 2.5em; }
 .stock-tag { font-size: 12px; color: #888; }
 .out-stock { color: #dc3545; font-weight: bold; font-size: 12px; }
 
+/* PRODUCT IMAGES */
+.product-img { width: 120px; height: 120px; object-fit: contain; }
+
 .status { margin-top: 20px; padding: 20px; border-radius: 8px; font-weight: bold; font-size: 1.2em; }
 input[type="text"] { font-size: 24px; padding: 15px; margin: 15px 0; width: 100%; box-sizing: border-box; border: 2px solid #ddd; border-radius: 8px; }
 
