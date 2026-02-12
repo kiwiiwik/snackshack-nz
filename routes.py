@@ -197,6 +197,20 @@ def email_settings():
 @main.route('/logout')
 def logout(): session.pop('user_id', None); return redirect(url_for('main.index'))
 
+@main.route('/register', methods=['POST'])
+def register():
+    first = request.form.get('first_name', '').strip()
+    last = request.form.get('last_name', '').strip()
+    if not first or not last:
+        flash("Please enter both first and last name.", "danger")
+        return redirect(url_for('main.index'))
+    card_id = f"SELF-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{first[:3].upper()}"
+    user = Users(card_id=card_id, first_name=first, last_name=last, balance=0.00)
+    db.session.add(user)
+    db.session.commit()
+    session['user_id'] = user.user_id
+    return redirect(url_for('main.index'))
+
 @main.route('/select_user/<int:user_id>')
 def select_user(user_id):
     u = Users.query.get(user_id)

@@ -57,6 +57,12 @@
     {% if not user %}
         <h2 class="page-title">Select Your Name</h2>
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4 mb-5">
+            <div class="col position-relative">
+                <div class="card h-100 p-4 user-tile text-center" style="border:2px dashed var(--color-primary);background:var(--color-primary-light);cursor:pointer;" data-bs-toggle="modal" data-bs-target="#registerModal">
+                    <div class="initial-avatar" style="background:#E8F0FE;color:var(--color-primary);font-size:2rem;">+</div>
+                    <div class="user-name" style="color:var(--color-primary);">I'm New Here</div>
+                </div>
+            </div>
             {% set ns = namespace(last_char='') %}
             {% for u in users %}
                 {% set current_char = u.first_name[0]|upper %}
@@ -229,6 +235,29 @@
                         <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('PERMANENTLY DELETE ALL TRANSACTION HISTORY?')">NUKE ALL</a>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not user %}
+<div class="modal fade" id="registerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 25px;">
+            <div class="modal-body p-5 text-center">
+                <div class="initial-avatar mx-auto" style="background:#E8F0FE;color:var(--color-primary);font-size:2rem;width:72px;height:72px;margin-bottom:16px;">+</div>
+                <h3 class="fw-bold mb-1">Welcome!</h3>
+                <p class="text-muted mb-4">Enter your name to get started</p>
+                <form action="{{ url_for('main.register') }}" method="POST">
+                    <div class="mb-3">
+                        <input type="text" name="first_name" class="form-control form-control-lg" placeholder="First Name" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <input type="text" name="last_name" class="form-control form-control-lg" placeholder="Last Name" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">JOIN</button>
+                </form>
             </div>
         </div>
     </div>
