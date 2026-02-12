@@ -13,6 +13,7 @@ class Users(db.Model):
     last_seen = db.Column('last_seen', db.DateTime, default=datetime.utcnow)
     pin = db.Column('PIN', db.String(4))
     email = db.Column('Email_Address', db.String(100))
+    notify_on_purchase = db.Column('Notify_On_Purchase', db.Boolean, default=False)
     is_admin = db.Column('Is_Admin', db.Boolean, default=False)
 
     def to_dict(self):
