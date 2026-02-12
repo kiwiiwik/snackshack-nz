@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Monthly Report</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -10,14 +10,14 @@
     .wrap { max-width: 1100px; }
     .mono { font-variant-numeric: tabular-nums; }
     .small-muted { font-size: 0.9rem; color: #6c757d; }
-    details > summary { cursor: pointer; }
+    details > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; padding: 6px 0; }
   </style>
 </head>
 <body class="bg-light">
   <nav class="navbar navbar-light bg-white shadow-sm mb-4">
     <div class="container wrap">
       <a class="navbar-brand fw-bold" href="/">&#129373; Claudes Snackshack</a>
-      <a class="btn btn-sm btn-outline-secondary" href="/">Back</a>
+      <a class="btn btn-outline-secondary fw-bold py-2 px-4" href="/">Back</a>
     </div>
   </nav>
 
@@ -33,7 +33,7 @@
           <label class="form-label mb-1 small-muted">Month</label>
           <input class="form-control" type="month" name="month" value="{{ selected_month }}">
         </div>
-        <button class="btn btn-primary" type="submit">Run</button>
+        <button class="btn btn-primary fw-bold py-2 px-4" type="submit">Run</button>
       </form>
     </div>
 

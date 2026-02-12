@@ -128,7 +128,7 @@
                 </div>
             </div>
         {% endfor %}
-        <div class="version-tag">Kiosk v1.6.6</div>
+        <div class="version-tag">Kiosk v1.6.7</div>
     {% endif %}
 </div>
 
@@ -216,6 +216,35 @@
             <div class="modal-body p-5">
                 <h3 class="fw-bold mb-1 text-center">Email Settings</h3>
                 <p class="text-muted text-center mb-4">Get notified when a purchase is made on your account</p>
+                {% if verify_email and pending_email %}
+                <form action="{{ url_for('main.email_settings') }}" method="POST">
+                    <input type="hidden" name="email" value="{{ pending_email }}">
+                    <input type="hidden" name="notify_on_purchase" value="on">
+                    <p class="text-center mb-2">Code sent to <strong>{{ pending_email }}</strong></p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">6-Digit Verification Code</label>
+                        <input type="text" name="verify_code" id="verifyCodeValue" class="form-control form-control-lg text-center fw-bold" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="000000" readonly>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto 20px;">
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('1')">1</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('2')">2</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('3')">3</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('4')">4</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('5')">5</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('6')">6</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('7')">7</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('8')">8</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('9')">9</button>
+                        <button type="button" class="btn btn-outline-secondary btn-lg fw-bold fs-5 py-3" onclick="codeClear()">Clear</button>
+                        <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="codeKey('0')">0</button>
+                        <button type="submit" class="btn btn-success btn-lg fw-bold fs-5 py-3">Verify</button>
+                    </div>
+                </form>
+                <script>
+                    function codeKey(d) { var el = document.getElementById('verifyCodeValue'); if (el.value.length < 6) el.value += d; }
+                    function codeClear() { document.getElementById('verifyCodeValue').value = ""; }
+                </script>
+                {% else %}
                 <form action="{{ url_for('main.email_settings') }}" method="POST">
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted text-uppercase">Email Address</label>
@@ -225,8 +254,10 @@
                         <input class="form-check-input" type="checkbox" name="notify_on_purchase" id="notifyToggle" {{ 'checked' if user.notify_on_purchase }}>
                         <label class="form-check-label fw-bold" for="notifyToggle">Notify me on every purchase</label>
                     </div>
+                    {% if user.email %}<p class="text-muted small text-center mb-3"><i class="fas fa-check-circle text-success me-1"></i> Verified: {{ user.email }}</p>{% endif %}
                     <button type="submit" class="btn btn-info w-100 py-3 fw-bold text-white shadow">SAVE</button>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -268,6 +299,9 @@
     ['mousedown', 'touchstart', 'click', 'keydown'].forEach(evt => window.addEventListener(evt, resetTimer, false));
     document.addEventListener('hidden.bs.modal', resetTimer);
     resetTimer();
+    {% endif %}
+    {% if verify_email and user %}
+    window.addEventListener('load', function() { new bootstrap.Modal(document.getElementById('emailSettingsModal')).show(); });
     {% endif %}
 </script>
 </body>

@@ -1,4 +1,5 @@
 import os
+import random
 import smtplib
 import threading
 from email.mime.text import MIMEText
@@ -17,6 +18,40 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 main = Blueprint('main', __name__)
+
+def send_verification_email(app, user_email, user_name, code):
+    """Send a 6-digit verification code to confirm email ownership."""
+    def _send():
+        with app.app_context():
+            smtp_host = os.environ.get('SMTP_HOST', 'mail.smtp2go.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', 2525))
+            smtp_user = os.environ.get('SMTP_USER', '')
+            smtp_pass = os.environ.get('SMTP_PASS', '')
+            smtp_from = os.environ.get('SMTP_FROM', smtp_user)
+            if not smtp_user or not smtp_pass:
+                return
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f"Snackshack: Your verification code is {code}"
+            msg['From'] = smtp_from
+            msg['To'] = user_email
+            body = f"""Hi {user_name},
+
+Your Snackshack email verification code is:
+
+    {code}
+
+Enter this code on the kiosk to confirm your email address.
+
+- Claudes Snackshack"""
+            msg.attach(MIMEText(body, 'plain'))
+            try:
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.sendmail(smtp_from, user_email, msg.as_string())
+            except Exception:
+                pass
+    threading.Thread(target=_send, daemon=True).start()
 
 def send_purchase_email(app, user_email, user_name, product_desc, price, new_balance):
     """Send purchase notification email via SMTP2Go in a background thread."""
@@ -98,13 +133,15 @@ def index():
         cat = p.category if p.category in grouped else "Snacks"
         grouped[cat].append(p)
         
-    return render_template('index.html', 
-        user=current_user, 
-        users=all_users, 
-        grouped_products={k: v for k, v in grouped.items() if v}, 
-        needs_pin=needs_pin, 
-        pin_user=pin_user, 
-        just_bought=request.args.get('bought'))
+    return render_template('index.html',
+        user=current_user,
+        users=all_users,
+        grouped_products={k: v for k, v in grouped.items() if v},
+        needs_pin=needs_pin,
+        pin_user=pin_user,
+        just_bought=request.args.get('bought'),
+        verify_email=request.args.get('verify_email'),
+        pending_email=session.get('pending_email'))
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
@@ -185,14 +222,54 @@ def pin_clear():
 
 @main.route('/email_settings', methods=['POST'])
 def email_settings():
-    if 'user_id' in session:
-        u = Users.query.get(int(session['user_id']))
-        if u:
-            u.email = request.form.get('email', '').strip() or None
-            u.notify_on_purchase = 'notify_on_purchase' in request.form
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    u = Users.query.get(int(session['user_id']))
+    if not u:
+        return redirect(url_for('main.index'))
+
+    new_email = request.form.get('email', '').strip() or None
+    verify_code = request.form.get('verify_code', '').strip()
+    notify = 'notify_on_purchase' in request.form
+
+    # If user is just toggling notification (no email change), save directly
+    if new_email == u.email:
+        u.notify_on_purchase = notify
+        db.session.commit()
+        flash("Notification preference saved.", "success")
+        return redirect(url_for('main.index'))
+
+    # If user is clearing their email
+    if not new_email:
+        u.email = None
+        u.notify_on_purchase = False
+        session.pop('pending_email', None)
+        session.pop('email_code', None)
+        db.session.commit()
+        flash("Email removed.", "info")
+        return redirect(url_for('main.index'))
+
+    # If user submitted a verification code, check it
+    if verify_code:
+        if verify_code == session.get('email_code') and new_email == session.get('pending_email'):
+            u.email = new_email
+            u.notify_on_purchase = notify
+            session.pop('pending_email', None)
+            session.pop('email_code', None)
             db.session.commit()
-            flash("Email settings saved.", "success")
-    return redirect(url_for('main.index'))
+            flash("Email verified and saved!", "success")
+        else:
+            flash("Incorrect code. Try again.", "danger")
+            return redirect(url_for('main.index', verify_email=1))
+        return redirect(url_for('main.index'))
+
+    # New/changed email — send verification code
+    code = f"{random.randint(0, 999999):06d}"
+    session['pending_email'] = new_email
+    session['email_code'] = code
+    send_verification_email(current_app._get_current_object(), new_email, u.first_name, code)
+    flash("Verification code sent! Check your email.", "info")
+    return redirect(url_for('main.index', verify_email=1))
 
 @main.route('/logout')
 def logout(): session.pop('user_id', None); return redirect(url_for('main.index'))

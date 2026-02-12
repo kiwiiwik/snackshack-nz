@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Product Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -18,14 +19,17 @@
         .key.special { background: #adb5bd; color: white; }
         .version-tag { font-size: 0.65rem; color: #adb5bd; position: fixed; bottom: 10px; right: 15px; }
         .vk-input:focus { border-color: #0d6efd; box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25); }
+        .touch-action { min-width: 48px; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .touch-action:active { transform: scale(0.92); }
+        .btn-close { width: 48px; height: 48px; padding: 16px; }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/?open_admin=1"><i class="fas fa-arrow-left me-2"></i> Admin Tools</a>
-        <button class="btn btn-success btn-sm shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#editModal" onclick="clearForm()"><i class="fas fa-plus me-1"></i> Add New Item</button>
+        <a class="navbar-brand fw-bold fs-4" href="/"><i class="fas fa-arrow-left me-2"></i> Back to Kiosk</a>
+        <button class="btn btn-success shadow-sm fw-bold py-2 px-4" data-bs-toggle="modal" data-bs-target="#editModal" onclick="clearForm()"><i class="fas fa-plus me-1"></i> Add New Item</button>
     </div>
 </nav>
 
@@ -36,8 +40,8 @@
             <td><code>{{ p.upc_code }}</code></td><td>{{ p.manufacturer or '-' }}</td><td class="fw-bold">{{ p.description }}</td><td class="text-success fw-bold">${{ "%.2f"|format(p.price) }}</td>
             <td><span class="badge bg-light text-dark border">{{ p.stock_level }}</span></td>
             <td class="text-end px-4">
-                <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#editModal" onclick='editProduct({{ p.to_dict() | tojson }})'><i class="fas fa-edit"></i></button>
-                <a href="{{ url_for('main.delete_product', upc=p.upc_code or 'UNKNOWN') }}" class="btn btn-sm btn-outline-danger shadow-sm ms-1" onclick="return confirm('Delete item?')"><i class="fas fa-trash"></i></a>
+                <button type="button" class="btn btn-outline-primary shadow-sm touch-action" data-bs-toggle="modal" data-bs-target="#editModal" onclick='editProduct({{ p.to_dict() | tojson }})'><i class="fas fa-edit"></i></button>
+                <a href="{{ url_for('main.delete_product', upc=p.upc_code or 'UNKNOWN') }}" class="btn btn-outline-danger shadow-sm ms-2 touch-action" onclick="return confirm('Delete item?')"><i class="fas fa-trash"></i></a>
             </td>
         </tr>{% endfor %}</tbody>
     </table></div></div>
