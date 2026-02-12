@@ -119,6 +119,45 @@
     {% endif %}
 </div>
 
+{% if pin_user %}
+<div id="pinOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:25px;padding:40px;text-align:center;max-width:380px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+        <div class="initial-avatar mx-auto">{{ pin_user.first_name[0] }}</div>
+        <h3 class="fw-bold mb-1">{{ pin_user.first_name }} {{ pin_user.last_name }}</h3>
+        <p class="text-muted mb-4">Enter your 4-digit PIN</p>
+        <form action="{{ url_for('main.pin_verify') }}" method="POST">
+            <input type="hidden" name="user_id" value="{{ pin_user.user_id }}">
+            <input type="hidden" name="pin" id="pinValue" value="">
+            <div id="pinDots" style="font-size:2.5rem;letter-spacing:15px;min-height:55px;color:#0d6efd;" class="mb-3"></div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto;">
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('1')">1</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('2')">2</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('3')">3</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('4')">4</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('5')">5</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('6')">6</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('7')">7</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('8')">8</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('9')">9</button>
+                <button type="button" class="btn btn-outline-secondary btn-lg fw-bold fs-5 py-3" onclick="pinClear()">Clear</button>
+                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="pinKey('0')">0</button>
+                <button type="submit" class="btn btn-primary btn-lg fw-bold fs-5 py-3">Enter</button>
+            </div>
+        </form>
+        <a href="/" class="btn btn-outline-danger btn-lg w-100 mt-3 fw-bold">Cancel</a>
+    </div>
+</div>
+<script>
+    let pin = "";
+    function pinKey(d) { if (pin.length < 4) { pin += d; update(); } }
+    function pinClear() { pin = ""; update(); }
+    function update() {
+        document.getElementById('pinDots').innerHTML = "\u25CF ".repeat(pin.length);
+        document.getElementById('pinValue').value = pin;
+    }
+</script>
+{% endif %}
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     {% if user %}
