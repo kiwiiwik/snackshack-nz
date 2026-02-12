@@ -133,6 +133,11 @@ def index():
         cat = p.category if p.category in grouped else "Snacks"
         grouped[cat].append(p)
         
+    # Generate a fresh math captcha for email form
+    captcha_a, captcha_b = random.randint(10, 50), random.randint(1, 20)
+    session['captcha_answer'] = str(captcha_a + captcha_b)
+    captcha_q = f"What is {captcha_a} + {captcha_b}?"
+
     return render_template('index.html',
         user=current_user,
         users=all_users,
@@ -141,7 +146,8 @@ def index():
         pin_user=pin_user,
         just_bought=request.args.get('bought'),
         verify_email=request.args.get('verify_email'),
-        pending_email=session.get('pending_email'))
+        pending_email=session.get('pending_email'),
+        captcha_q=captcha_q)
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
@@ -230,6 +236,7 @@ def email_settings():
 
     new_email = request.form.get('email', '').strip() or None
     verify_code = request.form.get('verify_code', '').strip()
+    captcha = request.form.get('captcha', '').strip()
     notify = 'notify_on_purchase' in request.form
 
     # If user is just toggling notification (no email change), save directly
@@ -249,7 +256,7 @@ def email_settings():
         flash("Email removed.", "info")
         return redirect(url_for('main.index'))
 
-    # If user submitted a verification code, check it
+    # If user submitted a verification code, check it (captcha already passed)
     if verify_code:
         if verify_code == session.get('email_code') and new_email == session.get('pending_email'):
             u.email = new_email
@@ -263,7 +270,11 @@ def email_settings():
             return redirect(url_for('main.index', verify_email=1))
         return redirect(url_for('main.index'))
 
-    # New/changed email — send verification code
+    # New/changed email — verify captcha first, then send verification code
+    if captcha != session.get('captcha_answer'):
+        flash("Incorrect answer. Please try again.", "danger")
+        return redirect(url_for('main.index'))
+
     code = f"{random.randint(0, 999999):06d}"
     session['pending_email'] = new_email
     session['email_code'] = code
