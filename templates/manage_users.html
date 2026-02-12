@@ -11,7 +11,7 @@
 
 <nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/?open_admin=1"><i class="fas fa-arrow-left me-2"></i> Admin Switchboard</a>
+        <a class="navbar-brand fw-bold" href="/"><i class="fas fa-arrow-left me-2"></i> Back to Kiosk</a>
         <button class="btn btn-light btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#userModal" onclick="clearUserForm()"><i class="fas fa-user-plus me-1"></i> Add New Team Member</button>
     </div>
 </nav>
@@ -52,7 +52,7 @@
     <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold">SAVE CHANGES</button></div>
 </form></div></div>
 
-<div class="version-tag">Manager v1.4.7</div>
+<div class="version-tag">Manager v1.6.5</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function openPaymentModal(id, name) { document.getElementById('payUserId').value = id; document.getElementById('payUserName').innerText = name; new bootstrap.Modal(document.getElementById('paymentModal')).show(); }
