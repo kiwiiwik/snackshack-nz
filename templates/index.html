@@ -18,7 +18,7 @@
         <a class="navbar-brand" href="/">&#129373; Claudettes Snack Shoppe</a>
         {% if user %}
         <div class="d-flex align-items-center flex-wrap gap-2">
-            {% if user.is_admin %}
+            {% if user.is_admin or user.is_super_admin %}
                 <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#switchboardModal"><i class="fas fa-user-shield me-1"></i> Admin</button>
             {% endif %}
             {% if user.pin %}
@@ -27,6 +27,9 @@
                 <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#pinSetModal"><i class="fas fa-lock-open me-1"></i> PIN Off</button>
             {% endif %}
             <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#emailSettingsModal"><i class="fas fa-envelope me-1"></i> {{ 'Notify' if user.notify_on_purchase else 'Email' }}</button>
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#avatarPickerModal" style="padding:4px 10px;">
+                {% if user.avatar %}<img src="https://api.dicebear.com/9.x/fun-emoji/svg?seed={{ user.avatar }}" alt="" style="width:32px;height:32px;border-radius:50%;">{% else %}<i class="fas fa-smile me-1"></i> Avatar{% endif %}
+            </button>
             <span class="me-1">Active: <strong class="text-primary">{{ user.first_name }} {{ user.last_name }}</strong></span>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 fs-6">${{ "%.2f"|format(user.balance) }}</span>
             <a href="{{ url_for('main.logout') }}" class="btn btn-danger">Logout</a>
@@ -74,9 +77,13 @@
                     
                     <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark d-block h-100">
                         <div class="card h-100 p-4 user-tile text-center">
-                            {% if u.is_admin %}<i class="fas fa-user-shield badge-admin"></i>{% endif %}
+                            {% if u.is_super_admin %}<i class="fas fa-crown badge-admin" style="color:#F59E0B;" title="Super Admin"></i>{% elif u.is_admin %}<i class="fas fa-user-shield badge-admin"></i>{% endif %}
                             {% if u.pin %}<i class="fas fa-lock badge-lock"></i>{% endif %}
-                            <div class="initial-avatar">{{ u.first_name[0] }}</div>
+                            {% if u.avatar %}
+                                <img src="https://api.dicebear.com/9.x/fun-emoji/svg?seed={{ u.avatar }}" alt="" class="initial-avatar" style="background:transparent;border-radius:50%;width:72px;height:72px;">
+                            {% else %}
+                                <div class="initial-avatar">{{ u.first_name[0] }}</div>
+                            {% endif %}
                             <div class="user-name">{{ u.first_name }} {{ u.last_name }}</div>
                         </div>
                     </a>
@@ -120,7 +127,11 @@
 {% if pin_user %}
 <div id="pinOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
     <div style="background:white;border-radius:25px;padding:40px;text-align:center;max-width:380px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-        <div class="initial-avatar mx-auto">{{ pin_user.first_name[0] }}</div>
+        {% if pin_user.avatar %}
+            <img src="https://api.dicebear.com/9.x/fun-emoji/svg?seed={{ pin_user.avatar }}" alt="" class="initial-avatar mx-auto" style="background:transparent;border-radius:50%;width:72px;height:72px;">
+        {% else %}
+            <div class="initial-avatar mx-auto">{{ pin_user.first_name[0] }}</div>
+        {% endif %}
         <h3 class="fw-bold mb-1">{{ pin_user.first_name }} {{ pin_user.last_name }}</h3>
         <p class="text-muted mb-4">Enter your 4-digit PIN</p>
         <form action="{{ url_for('main.pin_verify') }}" method="POST">
@@ -281,9 +292,32 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="avatarPickerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 25px;">
+            <div class="modal-body p-4 p-md-5 text-center">
+                <h3 class="fw-bold mb-1">Choose Your Avatar</h3>
+                <p class="text-muted mb-4">Tap to select</p>
+                <div class="row row-cols-4 row-cols-md-6 g-3 mb-4">
+                    {% for seed in avatar_options %}
+                    <div class="col">
+                        <form action="{{ url_for('main.set_avatar') }}" method="POST" class="d-inline">
+                            <input type="hidden" name="avatar" value="{{ seed }}">
+                            <button type="submit" class="btn p-2 w-100 {{ 'btn-primary' if user.avatar == seed else 'btn-outline-light' }}" style="border-radius:var(--radius-lg);aspect-ratio:1;{{ 'border:3px solid var(--color-primary);' if user.avatar == seed else 'border:2px solid var(--color-border);' }}">
+                                <img src="https://api.dicebear.com/9.x/fun-emoji/svg?seed={{ seed }}" alt="{{ seed }}" style="width:100%;height:auto;border-radius:50%;">
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 
-{% if user and user.is_admin %}
+{% if user and (user.is_admin or user.is_super_admin) %}
 <div class="modal fade" id="switchboardModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">

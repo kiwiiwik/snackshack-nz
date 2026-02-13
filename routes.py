@@ -16,6 +16,13 @@ from sqlalchemy.exc import IntegrityError
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
+AVATAR_OPTIONS = [
+    'cookie', 'cupcake', 'donut', 'icecream', 'pizza', 'taco',
+    'burger', 'fries', 'sushi', 'avocado', 'peach', 'cherry',
+    'grape', 'lemon', 'mango', 'strawberry', 'watermelon', 'coconut',
+    'pineapple', 'banana', 'kiwi', 'blueberry', 'pancake', 'pretzel',
+]
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -188,7 +195,8 @@ def index():
         pin_user=pin_user,
         just_bought=request.args.get('bought'),
         verify_email=request.args.get('verify_email'),
-        pending_email=session.get('pending_email'))
+        pending_email=session.get('pending_email'),
+        avatar_options=AVATAR_OPTIONS)
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
@@ -348,6 +356,17 @@ def email_settings():
     flash("Verification code sent to your phone!", "info")
     return redirect(url_for('main.index', verify_email=1))
 
+@main.route('/set_avatar', methods=['POST'])
+def set_avatar():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    u = Users.query.get(int(session['user_id']))
+    avatar = request.form.get('avatar', '').strip()
+    if u and avatar in AVATAR_OPTIONS:
+        u.avatar = avatar
+        db.session.commit()
+    return redirect(url_for('main.index'))
+
 @main.route('/logout')
 def logout(): session.pop('user_id', None); return redirect(url_for('main.index'))
 
@@ -401,7 +420,8 @@ def select_user(user_id):
 @main.route('/admin/users')
 def manage_users():
     if 'user_id' not in session: return redirect(url_for('main.index'))
-    return render_template('manage_users.html', users=Users.query.order_by(Users.last_name).all())
+    current = Users.query.get(int(session['user_id']))
+    return render_template('manage_users.html', users=Users.query.order_by(Users.last_name).all(), current_user=current)
 
 @main.route('/admin/user/save', methods=['POST'])
 def save_user():
@@ -409,7 +429,14 @@ def save_user():
     user = Users.query.get(int(uid)) if uid else Users(card_id=request.form.get('card_id', '').strip())
     if not uid: db.session.add(user)
     user.first_name, user.last_name = request.form.get('first_name'), request.form.get('last_name')
-    user.is_admin = 'is_admin' in request.form
+    # Only super admins can change role assignments
+    current = Users.query.get(int(session.get('user_id', 0)))
+    if current and current.is_super_admin:
+        role = request.form.get('role', 'user')
+        user.is_super_admin = (role == 'super_admin')
+        user.is_admin = (role in ('admin', 'super_admin'))
+    else:
+        user.is_admin = 'is_admin' in request.form
     db.session.commit()
     return redirect(url_for('main.manage_users'))
 

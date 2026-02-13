@@ -39,7 +39,7 @@
             <td class="fw-bold">{{ u.first_name }} {{ u.last_name }}</td>
             <td><code>{{ u.card_id }}</code></td>
             <td class="{{ 'text-danger' if u.balance < 0 else 'text-success' }} fw-bold">${{ "%.2f"|format(u.balance) }}</td>
-            <td>{% if u.is_admin %}<span class="badge bg-danger">Admin</span>{% else %}<span class="badge bg-secondary">User</span>{% endif %}</td>
+            <td>{% if u.is_super_admin %}<span class="badge bg-warning text-dark"><i class="fas fa-crown me-1"></i>Super Admin</span>{% elif u.is_admin %}<span class="badge bg-danger">Admin</span>{% else %}<span class="badge bg-secondary">User</span>{% endif %}</td>
             <td class="text-end px-4">
                 <button type="button" class="btn btn-success shadow-sm touch-action" onclick='openPaymentModal({{ u.user_id }}, "{{ u.first_name }}")'><i class="fas fa-hand-holding-dollar"></i></button>
                 <button type="button" class="btn btn-outline-primary shadow-sm ms-2 touch-action" onclick='editUser({{ u.to_dict() | tojson }})'><i class="fas fa-edit"></i></button>
@@ -60,7 +60,18 @@
         <input type="hidden" name="user_id" id="formUserId">
         <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Card / Barcode ID</label><input type="text" name="card_id" id="formCardId" class="form-control" required></div>
         <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">First Name</label><input type="text" name="first_name" id="formFirstName" class="form-control" required></div><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Last Name</label><input type="text" name="last_name" id="formLastName" class="form-control" required></div></div>
+        {% if current_user and current_user.is_super_admin %}
+        <div class="mb-3">
+            <label class="form-label small fw-bold text-muted text-uppercase">Role</label>
+            <select name="role" id="formRole" class="form-select">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+                <option value="super_admin">Super Admin</option>
+            </select>
+        </div>
+        {% else %}
         <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_admin" id="formIsAdmin"><label class="form-check-label small fw-bold" for="formIsAdmin">Enable Admin Rights</label></div>
+        {% endif %}
     </div>
     <div class="modal-footer border-0"><button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold">SAVE CHANGES</button></div>
 </form></div></div>
@@ -69,8 +80,30 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function openPaymentModal(id, name) { document.getElementById('payUserId').value = id; document.getElementById('payUserName').innerText = name; new bootstrap.Modal(document.getElementById('paymentModal')).show(); }
-    function clearUserForm() { document.getElementById('userModalTitle').innerText = "Add New Team Member"; document.getElementById('formUserId').value = ""; document.getElementById('formCardId').value = ""; document.getElementById('formCardId').readOnly = false; document.getElementById('formFirstName').value = ""; document.getElementById('formLastName').value = ""; document.getElementById('formIsAdmin').checked = false; }
-    function editUser(u) { document.getElementById('userModalTitle').innerText = "Edit Team Member"; document.getElementById('formUserId').value = u.user_id; document.getElementById('formCardId').value = u.card_id; document.getElementById('formCardId').readOnly = true; document.getElementById('formFirstName').value = u.first_name; document.getElementById('formLastName').value = u.last_name; document.getElementById('formIsAdmin').checked = !!u.is_admin; new bootstrap.Modal(document.getElementById('userModal')).show(); }
+    function clearUserForm() {
+        document.getElementById('userModalTitle').innerText = "Add New Team Member";
+        document.getElementById('formUserId').value = "";
+        document.getElementById('formCardId').value = ""; document.getElementById('formCardId').readOnly = false;
+        document.getElementById('formFirstName').value = ""; document.getElementById('formLastName').value = "";
+        var roleEl = document.getElementById('formRole');
+        var adminEl = document.getElementById('formIsAdmin');
+        if (roleEl) roleEl.value = 'user';
+        if (adminEl) adminEl.checked = false;
+    }
+    function editUser(u) {
+        document.getElementById('userModalTitle').innerText = "Edit Team Member";
+        document.getElementById('formUserId').value = u.user_id;
+        document.getElementById('formCardId').value = u.card_id; document.getElementById('formCardId').readOnly = true;
+        document.getElementById('formFirstName').value = u.first_name;
+        document.getElementById('formLastName').value = u.last_name;
+        var roleEl = document.getElementById('formRole');
+        var adminEl = document.getElementById('formIsAdmin');
+        if (roleEl) {
+            roleEl.value = u.is_super_admin ? 'super_admin' : (u.is_admin ? 'admin' : 'user');
+        }
+        if (adminEl) adminEl.checked = !!u.is_admin;
+        new bootstrap.Modal(document.getElementById('userModal')).show();
+    }
 </script>
 </body>
 </html>
