@@ -427,11 +427,9 @@ def delete_user(user_id):
 def purge_users():
     if 'user_id' not in session:
         return redirect(url_for('main.index'))
-    # Find users who have zero transactions
-    from sqlalchemy import func
-    users_with_tx = db.session.query(Transactions.user_id).distinct().subquery()
+    users_with_tx = db.session.query(Transactions.user_id).distinct()
     idle_users = Users.query.filter(
-        ~Users.user_id.in_(db.session.query(users_with_tx.c.User_ID)),
+        ~Users.user_id.in_(users_with_tx),
         Users.user_id != int(session['user_id'])
     ).all()
     count = len(idle_users)
