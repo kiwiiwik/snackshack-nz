@@ -16,6 +16,8 @@ class Users(db.Model):
     notify_on_purchase = db.Column('Notify_On_Purchase', db.Boolean, default=False)
     phone_number = db.Column('Phone_Number', db.String(20))
     is_admin = db.Column('Is_Admin', db.Boolean, default=False)
+    is_super_admin = db.Column('Is_Super_Admin', db.Boolean, default=False)
+    avatar = db.Column('Avatar', db.String(50))
 
     def to_dict(self):
         return {
@@ -24,7 +26,9 @@ class Users(db.Model):
             'last_name': self.last_name or "",
             'card_id': self.card_id or "",
             'balance': float(self.balance) if self.balance else 0.0,
-            'is_admin': self.is_admin
+            'is_admin': self.is_admin,
+            'is_super_admin': self.is_super_admin,
+            'avatar': self.avatar or ""
         }
 
 class Products(db.Model):
