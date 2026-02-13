@@ -28,6 +28,11 @@ def allowed_file(filename):
 
 main = Blueprint('main', __name__)
 
+def is_mobile_site():
+    """Check if request is coming via the m. mobile subdomain."""
+    host = request.host.split(':')[0].lower()
+    return host.startswith('m.')
+
 # SMS daily counter (resets on new day)
 _sms_counter = {'date': None, 'count': 0}
 
@@ -172,21 +177,22 @@ def process_barcode(barcode):
 
 @main.route('/')
 def index():
+    mobile = is_mobile_site()
     current_user = None
     needs_pin = request.args.get('needs_pin')
     pin_user = Users.query.get(int(needs_pin)) if needs_pin else None
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
-    
+
     # Alphabetical sorting for 80+ names
     all_users = Users.query.order_by(Users.first_name.asc()).all()
-    
+
     cat_order = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
     grouped = {cat: [] for cat in cat_order}
     for p in Products.query.filter_by(is_quick_item=True).all():
         cat = p.category if p.category in grouped else "Snacks"
         grouped[cat].append(p)
-        
+
     return render_template('index.html',
         user=current_user,
         users=all_users,
@@ -196,7 +202,8 @@ def index():
         just_bought=request.args.get('bought'),
         verify_email=request.args.get('verify_email'),
         pending_email=session.get('pending_email'),
-        avatar_options=AVATAR_OPTIONS)
+        avatar_options=AVATAR_OPTIONS,
+        is_mobile=mobile)
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
@@ -371,11 +378,46 @@ def set_avatar():
     if 'user_id' not in session:
         return redirect(url_for('main.index'))
     u = Users.query.get(int(session['user_id']))
+    if not u:
+        return redirect(url_for('main.index'))
     avatar = request.form.get('avatar', '').strip()
-    if u and avatar in AVATAR_OPTIONS:
+    if avatar in AVATAR_OPTIONS:
         u.avatar = avatar
+        u.avatar_data = None  # clear custom photo when picking a preset
         db.session.commit()
     return redirect(url_for('main.index'))
+
+@main.route('/upload_avatar', methods=['POST'])
+def upload_avatar():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    u = Users.query.get(int(session['user_id']))
+    if not u:
+        return redirect(url_for('main.index'))
+    file = request.files.get('avatar_photo')
+    if file and file.filename and allowed_file(file.filename):
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        raw = file.read()
+        if len(raw) <= 2 * 1024 * 1024:
+            mime = 'jpeg' if ext == 'jpg' else ext
+            u.avatar_data = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
+            u.avatar = None  # clear preset when uploading custom
+            db.session.commit()
+    return redirect(url_for('main.index'))
+
+@main.route('/user_avatar/<int:user_id>')
+def user_avatar(user_id):
+    """Serve custom avatar photo from DB."""
+    u = Users.query.get(user_id)
+    if u and u.avatar_data:
+        match = re.match(r'^data:image/([\w+]+);base64,(.+)$', u.avatar_data, re.DOTALL)
+        if match:
+            mime, data = match.group(1), match.group(2)
+            resp = make_response(base64.b64decode(data))
+            resp.headers['Content-Type'] = f'image/{mime}'
+            resp.headers['Cache-Control'] = 'public, max-age=3600'
+            return resp
+    return redirect(url_for('static', filename='images/placeholder.png'))
 
 @main.route('/logout')
 def logout(): session.pop('user_id', None); return redirect(url_for('main.index'))
@@ -422,7 +464,12 @@ def register():
 def select_user(user_id):
     u = Users.query.get(user_id)
     if u and u.pin: return redirect(url_for('main.index', needs_pin=u.user_id))
-    if u: session['user_id'] = u.user_id; u.last_seen = datetime.utcnow(); db.session.commit()
+    if u:
+        if is_mobile_site():
+            session.permanent = True
+        session['user_id'] = u.user_id
+        u.last_seen = datetime.utcnow()
+        db.session.commit()
     return redirect(url_for('main.index'))
 
 # --- ADMIN USER MANAGEMENT ---

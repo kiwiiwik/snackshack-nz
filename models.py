@@ -18,6 +18,7 @@ class Users(db.Model):
     is_admin = db.Column('Is_Admin', db.Boolean, default=False)
     is_super_admin = db.Column('Is_Super_Admin', db.Boolean, default=False)
     avatar = db.Column('Avatar', db.String(50))
+    avatar_data = db.Column('Avatar_Data', db.Text)
 
     def to_dict(self):
         return {
