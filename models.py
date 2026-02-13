@@ -14,6 +14,7 @@ class Users(db.Model):
     pin = db.Column('PIN', db.String(4))
     email = db.Column('Email_Address', db.String(100))
     notify_on_purchase = db.Column('Notify_On_Purchase', db.Boolean, default=False)
+    phone_number = db.Column('Phone_Number', db.String(20))
     is_admin = db.Column('Is_Admin', db.Boolean, default=False)
 
     def to_dict(self):

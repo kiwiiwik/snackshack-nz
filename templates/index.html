@@ -128,7 +128,7 @@
                 </div>
             </div>
         {% endfor %}
-        <div class="version-tag">Kiosk v1.6.7</div>
+        <div class="version-tag">Kiosk v1.7.0</div>
     {% endif %}
 </div>
 
@@ -214,13 +214,14 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg border-0" style="border-radius: 25px;">
             <div class="modal-body p-5">
-                <h3 class="fw-bold mb-1 text-center">Email Settings</h3>
+                <h3 class="fw-bold mb-1 text-center">Notification Settings</h3>
                 <p class="text-muted text-center mb-4">Get notified when a purchase is made on your account</p>
                 {% if verify_email and pending_email %}
                 <form action="{{ url_for('main.email_settings') }}" method="POST">
                     <input type="hidden" name="email" value="{{ pending_email }}">
+                    <input type="hidden" name="phone" value="{{ session.get('pending_phone', '') }}">
                     <input type="hidden" name="notify_on_purchase" value="on">
-                    <p class="text-center mb-2">Code sent to <strong>{{ pending_email }}</strong></p>
+                    <p class="text-center mb-2"><i class="fas fa-sms me-1"></i> Code sent to <strong>{{ session.get('pending_phone', '') }}</strong></p>
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted text-uppercase">6-Digit Verification Code</label>
                         <input type="text" name="verify_code" id="verifyCodeValue" class="form-control form-control-lg text-center fw-bold" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="000000" readonly>
@@ -248,44 +249,46 @@
                 <form action="{{ url_for('main.email_settings') }}" method="POST">
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted text-uppercase">Email Address</label>
-                        <input type="email" name="email" class="form-control form-control-lg" placeholder="you@example.com" value="{{ user.email or '' }}">
+                        <input type="email" name="email" id="emailInput" class="form-control form-control-lg" placeholder="you@example.com" value="{{ user.email or '' }}">
+                    </div>
+                    <div class="mb-3" id="phoneSection" style="{{ 'display:none;' if user.email }}">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Mobile Number (for verification)</label>
+                        <input type="tel" name="phone" id="phoneValue" class="form-control form-control-lg text-center fw-bold" maxlength="13" placeholder="021 123 4567" value="{{ user.phone_number or '' }}" readonly>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:260px;margin:10px auto 0;">
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('1')">1</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('2')">2</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('3')">3</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('4')">4</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('5')">5</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('6')">6</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('7')">7</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('8')">8</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('9')">9</button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg fw-bold fs-5 py-3" onclick="phoneClear()">Clear</button>
+                            <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="phoneKey('0')">0</button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg fw-bold fs-5 py-3" onclick="phoneBack()">&larr;</button>
+                        </div>
                     </div>
                     <div class="form-check form-switch mb-4">
                         <input class="form-check-input" type="checkbox" name="notify_on_purchase" id="notifyToggle" {{ 'checked' if user.notify_on_purchase }}>
                         <label class="form-check-label fw-bold" for="notifyToggle">Notify me on every purchase</label>
                     </div>
                     {% if user.email %}<p class="text-muted small text-center mb-3"><i class="fas fa-check-circle text-success me-1"></i> Verified: {{ user.email }}</p>{% endif %}
-                    <div class="mb-3 p-3 bg-light rounded-4 text-center" id="captchaSection" style="display:none;">
-                        <label class="form-label fw-bold text-dark">{{ captcha_q }}</label>
-                        <input type="text" name="captcha" id="captchaValue" class="form-control form-control-lg text-center fw-bold mb-2" maxlength="3" inputmode="numeric" readonly placeholder="?">
-                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:220px;margin:0 auto;">
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('1')">1</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('2')">2</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('3')">3</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('4')">4</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('5')">5</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('6')">6</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('7')">7</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('8')">8</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('9')">9</button>
-                            <button type="button" class="btn btn-outline-secondary fw-bold fs-6 py-2" onclick="capClear()">Clear</button>
-                            <button type="button" class="btn btn-light fw-bold fs-4 py-2" onclick="capKey('0')">0</button>
-                            <div></div>
-                        </div>
-                    </div>
                     <button type="submit" class="btn btn-info w-100 py-3 fw-bold text-white shadow">SAVE</button>
                 </form>
                 <script>
-                    function capKey(d) { var el = document.getElementById('captchaValue'); if (el.value.length < 3) el.value += d; }
-                    function capClear() { document.getElementById('captchaValue').value = ""; }
+                    function phoneKey(d) { var el = document.getElementById('phoneValue'); if (el.value.length < 13) el.value += d; }
+                    function phoneClear() { document.getElementById('phoneValue').value = ""; }
+                    function phoneBack() { var el = document.getElementById('phoneValue'); el.value = el.value.slice(0, -1); }
                     (function() {
-                        var form = document.querySelector('#emailSettingsModal form');
-                        var emailInput = form.querySelector('input[name="email"]');
-                        var capSection = document.getElementById('captchaSection');
+                        var emailInput = document.getElementById('emailInput');
+                        var phoneSection = document.getElementById('phoneSection');
                         var origEmail = emailInput.value;
-                        emailInput.addEventListener('input', function() {
-                            capSection.style.display = (emailInput.value !== origEmail && emailInput.value) ? 'block' : 'none';
-                        });
+                        function checkEmail() {
+                            phoneSection.style.display = (emailInput.value && emailInput.value !== origEmail) ? 'block' : (origEmail ? 'none' : 'block');
+                        }
+                        emailInput.addEventListener('input', checkEmail);
+                        checkEmail();
                     })();
                 </script>
                 {% endif %}
