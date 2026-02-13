@@ -1,4 +1,6 @@
 import os
+import re
+import base64
 import random
 import smtplib
 import threading
@@ -232,6 +234,21 @@ def save_product_manual():
         os.makedirs(upload_dir, exist_ok=True)
         file.save(os.path.join(upload_dir, filename))
         p.image_url = filename
+    else:
+        # Handle base64 pasted image data (fallback for browsers where DataTransfer fails)
+        b64_data = request.form.get('image_base64', '').strip()
+        if b64_data:
+            match = re.match(r'^data:image/(png|jpe?g|gif|webp);base64,(.+)$', b64_data, re.DOTALL)
+            if match:
+                ext = match.group(1).replace('jpeg', 'jpg')
+                raw = base64.b64decode(match.group(2))
+                if len(raw) <= 2 * 1024 * 1024:
+                    filename = secure_filename(f"{upc}.{ext}")
+                    upload_dir = os.path.join(current_app.static_folder, 'images')
+                    os.makedirs(upload_dir, exist_ok=True)
+                    with open(os.path.join(upload_dir, filename), 'wb') as f:
+                        f.write(raw)
+                    p.image_url = filename
 
     db.session.commit()
     return redirect(url_for('main.manage_products'))
@@ -341,12 +358,36 @@ def register():
     if not first or not last:
         flash("Please enter both first and last name.", "danger")
         return redirect(url_for('main.index'))
+    want_notify = request.form.get('want_notifications') == 'yes'
+    new_email = request.form.get('email', '').strip() or None
+    new_phone = request.form.get('phone', '').strip() or None
     card_id = f"SELF-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{first[:3].upper()}"
     user = Users(card_id=card_id, first_name=first, last_name=last, balance=0.00)
-    db.session.add(user)
-    db.session.commit()
-    session['user_id'] = user.user_id
-    return redirect(url_for('main.index'))
+    if want_notify and new_email and new_phone:
+        user.notify_on_purchase = True
+        # Store pending verification in session, don't save email until verified
+        db.session.add(user)
+        db.session.commit()
+        session['user_id'] = user.user_id
+        # Check daily SMS cap before sending
+        allowed, count, cap = check_sms_cap()
+        if allowed:
+            code = f"{random.randint(0, 999999):06d}"
+            session['pending_email'] = new_email
+            session['pending_phone'] = new_phone
+            session['sms_code'] = code
+            send_sms_code(current_app._get_current_object(), new_phone, first, code)
+            flash("Welcome! Verification code sent to your phone.", "info")
+            return redirect(url_for('main.index', verify_email=1))
+        else:
+            flash("Welcome! SMS limit reached today - set up email later via the Email button.", "info")
+            return redirect(url_for('main.index'))
+    else:
+        db.session.add(user)
+        db.session.commit()
+        session['user_id'] = user.user_id
+        flash("Welcome to the Snack Shoppe!", "success")
+        return redirect(url_for('main.index'))
 
 @main.route('/select_user/<int:user_id>')
 def select_user(user_id):
@@ -380,6 +421,24 @@ def delete_user(user_id):
             db.session.delete(user); db.session.commit()
         except IntegrityError:
             db.session.rollback(); flash("User has history; delete failed.", "danger")
+    return redirect(url_for('main.manage_users'))
+
+@main.route('/admin/users/purge', methods=['POST'])
+def purge_users():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    # Find users who have zero transactions
+    from sqlalchemy import func
+    users_with_tx = db.session.query(Transactions.user_id).distinct().subquery()
+    idle_users = Users.query.filter(
+        ~Users.user_id.in_(db.session.query(users_with_tx.c.User_ID)),
+        Users.user_id != int(session['user_id'])
+    ).all()
+    count = len(idle_users)
+    for u in idle_users:
+        db.session.delete(u)
+    db.session.commit()
+    flash(f"Purged {count} user(s) with no purchase history.", "info")
     return redirect(url_for('main.manage_users'))
 
 @main.route('/admin/user/payment', methods=['POST'])
