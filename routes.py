@@ -1,4 +1,5 @@
 import os
+import random
 import smtplib
 import threading
 from email.mime.text import MIMEText
@@ -17,6 +18,85 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 main = Blueprint('main', __name__)
+
+# SMS daily counter (resets on new day)
+_sms_counter = {'date': None, 'count': 0}
+
+def normalise_nz_phone(phone):
+    """Convert NZ local mobile number to international format for SMS API."""
+    phone = phone.replace(' ', '').replace('-', '')
+    if phone.startswith('0'):
+        phone = '+64' + phone[1:]
+    elif phone.startswith('64') and not phone.startswith('+'):
+        phone = '+' + phone
+    return phone
+
+def check_sms_cap():
+    """Check if daily SMS cap has been reached. Returns (allowed, count, cap)."""
+    daily_cap = int(os.environ.get('SMS_DAILY_CAP', '20'))
+    today = datetime.utcnow().date()
+    if _sms_counter['date'] != today:
+        _sms_counter['date'] = today
+        _sms_counter['count'] = 0
+    return _sms_counter['count'] < daily_cap, _sms_counter['count'], daily_cap
+
+def send_sms_code(app, phone_number, user_name, code):
+    """Send verification code via MessageMedia SMS."""
+    def _send():
+        with app.app_context():
+            api_key = os.environ.get('MESSAGEMEDIA_API_KEY', '')
+            api_secret = os.environ.get('MESSAGEMEDIA_API_SECRET', '')
+            if not api_key or not api_secret:
+                return
+            intl_phone = normalise_nz_phone(phone_number)
+            message = f"Snackshack code: {code} - Enter this on the kiosk to verify your email."
+            try:
+                resp = requests.post(
+                    'https://api.messagemedia.com/v1/messages',
+                    auth=(api_key, api_secret),
+                    headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+                    json={'messages': [{'content': message, 'destination_number': intl_phone}]},
+                    timeout=10
+                )
+                if resp.status_code in (200, 201, 202):
+                    _sms_counter['count'] += 1
+                    # Notify admin about every SMS sent
+                    notify_email = os.environ.get('SMS_NOTIFY_EMAIL', '')
+                    if notify_email:
+                        _send_sms_admin_notification(app, notify_email, user_name, intl_phone,
+                                                     _sms_counter['count'], int(os.environ.get('SMS_DAILY_CAP', '20')))
+            except Exception:
+                pass
+    threading.Thread(target=_send, daemon=True).start()
+
+def _send_sms_admin_notification(app, admin_email, user_name, phone, count, cap):
+    """Email admin whenever an SMS is sent, showing daily usage."""
+    smtp_host = os.environ.get('SMTP_HOST', 'mail.smtp2go.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 2525))
+    smtp_user = os.environ.get('SMTP_USER', '')
+    smtp_pass = os.environ.get('SMTP_PASS', '')
+    smtp_from = os.environ.get('SMTP_FROM', smtp_user)
+    if not smtp_user or not smtp_pass:
+        return
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f"Snackshack SMS sent ({count}/{cap} today)"
+    msg['From'] = smtp_from
+    msg['To'] = admin_email
+    body = f"""SMS verification code sent:
+
+  User: {user_name}
+  Phone: {phone}
+  Daily usage: {count} of {cap}
+
+- Claudes Snackshack"""
+    msg.attach(MIMEText(body, 'plain'))
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_from, admin_email, msg.as_string())
+    except Exception:
+        pass
 
 def send_purchase_email(app, user_email, user_name, product_desc, price, new_balance):
     """Send purchase notification email via SMTP2Go in a background thread."""
@@ -98,13 +178,15 @@ def index():
         cat = p.category if p.category in grouped else "Snacks"
         grouped[cat].append(p)
         
-    return render_template('index.html', 
-        user=current_user, 
-        users=all_users, 
-        grouped_products={k: v for k, v in grouped.items() if v}, 
-        needs_pin=needs_pin, 
-        pin_user=pin_user, 
-        just_bought=request.args.get('bought'))
+    return render_template('index.html',
+        user=current_user,
+        users=all_users,
+        grouped_products={k: v for k, v in grouped.items() if v},
+        needs_pin=needs_pin,
+        pin_user=pin_user,
+        just_bought=request.args.get('bought'),
+        verify_email=request.args.get('verify_email'),
+        pending_email=session.get('pending_email'))
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
@@ -185,14 +267,69 @@ def pin_clear():
 
 @main.route('/email_settings', methods=['POST'])
 def email_settings():
-    if 'user_id' in session:
-        u = Users.query.get(int(session['user_id']))
-        if u:
-            u.email = request.form.get('email', '').strip() or None
-            u.notify_on_purchase = 'notify_on_purchase' in request.form
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    u = Users.query.get(int(session['user_id']))
+    if not u:
+        return redirect(url_for('main.index'))
+
+    new_email = request.form.get('email', '').strip() or None
+    new_phone = request.form.get('phone', '').strip() or None
+    verify_code = request.form.get('verify_code', '').strip()
+    notify = 'notify_on_purchase' in request.form
+
+    # If user is just toggling notification (no email/phone change), save directly
+    if new_email == u.email and (new_phone or None) == (u.phone_number or None):
+        u.notify_on_purchase = notify
+        db.session.commit()
+        flash("Notification preference saved.", "success")
+        return redirect(url_for('main.index'))
+
+    # If user is clearing their email
+    if not new_email:
+        u.email = None
+        u.notify_on_purchase = False
+        session.pop('pending_email', None)
+        session.pop('pending_phone', None)
+        session.pop('sms_code', None)
+        db.session.commit()
+        flash("Email removed.", "info")
+        return redirect(url_for('main.index'))
+
+    # If user submitted a verification code, check it
+    if verify_code:
+        if verify_code == session.get('sms_code') and new_email == session.get('pending_email'):
+            u.email = new_email
+            u.phone_number = session.get('pending_phone')
+            u.notify_on_purchase = notify
+            session.pop('pending_email', None)
+            session.pop('pending_phone', None)
+            session.pop('sms_code', None)
             db.session.commit()
-            flash("Email settings saved.", "success")
-    return redirect(url_for('main.index'))
+            flash("Email verified and saved!", "success")
+        else:
+            flash("Incorrect code. Try again.", "danger")
+            return redirect(url_for('main.index', verify_email=1))
+        return redirect(url_for('main.index'))
+
+    # New/changed email — send SMS verification code
+    if not new_phone:
+        flash("Enter your mobile number to receive a verification code.", "danger")
+        return redirect(url_for('main.index'))
+
+    # Check daily SMS cap
+    allowed, count, cap = check_sms_cap()
+    if not allowed:
+        flash("SMS limit reached for today. Try again tomorrow.", "warning")
+        return redirect(url_for('main.index'))
+
+    code = f"{random.randint(0, 999999):06d}"
+    session['pending_email'] = new_email
+    session['pending_phone'] = new_phone
+    session['sms_code'] = code
+    send_sms_code(current_app._get_current_object(), new_phone, u.first_name, code)
+    flash("Verification code sent to your phone!", "info")
+    return redirect(url_for('main.index', verify_email=1))
 
 @main.route('/logout')
 def logout(): session.pop('user_id', None); return redirect(url_for('main.index'))
