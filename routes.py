@@ -7,7 +7,7 @@ import threading
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app, make_response
 from werkzeug.utils import secure_filename
 from models import db, Users, Products, Transactions
 from datetime import datetime
@@ -234,29 +234,25 @@ def save_product_manual():
     p.price, p.category, p.stock_level = Decimal(request.form.get('price', '0.00')), request.form.get('category'), int(request.form.get('stock_level', 0))
     p.is_quick_item = 'is_quick_item' in request.form
 
+    # Store image as base64 in DB so it persists across Azure redeploys
     file = request.files.get('product_image')
     if file and file.filename and allowed_file(file.filename):
         ext = file.filename.rsplit('.', 1)[1].lower()
-        filename = secure_filename(f"{upc}.{ext}")
-        upload_dir = os.path.join(current_app.static_folder, 'images')
-        os.makedirs(upload_dir, exist_ok=True)
-        file.save(os.path.join(upload_dir, filename))
-        p.image_url = filename
+        raw = file.read()
+        if len(raw) <= 2 * 1024 * 1024:
+            mime = 'jpeg' if ext == 'jpg' else ext
+            p.image_data = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
+            p.image_url = secure_filename(f"{upc}.{ext}")
     else:
-        # Handle base64 pasted image data (fallback for browsers where DataTransfer fails)
         b64_data = request.form.get('image_base64', '').strip()
         if b64_data:
             match = re.match(r'^data:image/(png|jpe?g|gif|webp);base64,(.+)$', b64_data, re.DOTALL)
             if match:
-                ext = match.group(1).replace('jpeg', 'jpg')
                 raw = base64.b64decode(match.group(2))
                 if len(raw) <= 2 * 1024 * 1024:
-                    filename = secure_filename(f"{upc}.{ext}")
-                    upload_dir = os.path.join(current_app.static_folder, 'images')
-                    os.makedirs(upload_dir, exist_ok=True)
-                    with open(os.path.join(upload_dir, filename), 'wb') as f:
-                        f.write(raw)
-                    p.image_url = filename
+                    p.image_data = b64_data
+                    ext = match.group(1).replace('jpeg', 'jpg')
+                    p.image_url = secure_filename(f"{upc}.{ext}")
 
     db.session.commit()
     return redirect(url_for('main.manage_products'))
@@ -268,6 +264,20 @@ def delete_product(upc):
         try: db.session.delete(p); db.session.commit()
         except IntegrityError: db.session.rollback(); flash("History exists; delete failed.", "danger")
     return redirect(url_for('main.manage_products'))
+
+@main.route('/product_image/<upc>')
+def product_image(upc):
+    """Serve product image from DB. Falls back to placeholder."""
+    p = Products.query.get(upc)
+    if p and p.image_data:
+        match = re.match(r'^data:image/([\w+]+);base64,(.+)$', p.image_data, re.DOTALL)
+        if match:
+            mime, data = match.group(1), match.group(2)
+            resp = make_response(base64.b64decode(data))
+            resp.headers['Content-Type'] = f'image/{mime}'
+            resp.headers['Cache-Control'] = 'public, max-age=86400'
+            return resp
+    return redirect(url_for('static', filename='images/placeholder.png'))
 
 @main.route('/pin_verify', methods=['POST'])
 def pin_verify():

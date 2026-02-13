@@ -98,7 +98,7 @@
                     {% for p in items %}
                     <div class="col">
                         <div class="product-card h-100 text-center">
-                            <img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}"
+                            <img src="{{ url_for('main.product_image', upc=p.upc_code) }}"
                                  class="product-img mb-3"
                                  onerror="this.src='/static/images/placeholder.png';"
                                  alt="{{ p.description }}">
