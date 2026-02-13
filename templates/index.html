@@ -3,63 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Claudes Snackshack</title>
+    <title>Claudettes Snack Shoppe</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #fcfcfc; font-family: 'Segoe UI', system-ui, sans-serif; padding-top: 190px; scroll-behavior: smooth; }
-        .fixed-header { position: fixed; top: 0; left: 0; right: 0; z-index: 2000; background: white; border-bottom: 2px solid #eee; }
-        
-        .alphabet-nav { display: flex; overflow-x: auto; padding: 15px; gap: 8px; background: #f8f9fa; border-bottom: 1px solid #dee2e6; scrollbar-width: none; }
-        .alphabet-nav::-webkit-scrollbar { display: none; }
-        .letter-link { min-width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border: 2px solid #0d6efd; border-radius: 12px; text-decoration: none; color: #0d6efd; font-weight: bold; font-size: 1.2rem; }
-
-        .category-nav { display: flex; overflow-x: auto; white-space: nowrap; padding: 15px 10px; gap: 10px; background: #fff; scrollbar-width: none; }
-        .nav-chip { padding: 12px 25px; background: #e9ecef; border-radius: 50px; text-decoration: none; color: #495057; font-weight: 700; }
-
-        /* User Tile & Badges */
-        .user-tile { border-radius: 25px; border: none; background: white; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; transition: 0.2s; }
-        .user-tile:active { transform: scale(0.95); background: #0d6efd; color: white !important; }
-        
-        /* Fixed Badge Positions */
-        .badge-lock { position: absolute; top: 15px; right: 15px; color: #adb5bd; font-size: 1.2rem; }
-        .badge-admin { position: absolute; top: 15px; left: 15px; color: #0d6efd; font-size: 1.2rem; }
-        .user-tile:active .badge-lock, .user-tile:active .badge-admin { color: white; }
-
-        .initial-avatar { width: 80px; height: 80px; background: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; font-weight: bold; font-size: 1.8rem; }
-        
-        .section-title { font-weight: 800; font-size: 2rem; margin: 50px 0 25px; padding-left: 15px; border-left: 8px solid #0d6efd; }
-        .product-card { background: white; border-radius: 25px; border: 1px solid #eee; padding: 25px; display: flex; flex-direction: column; justify-content: space-between; }
-        .purchase-btn { background: #0d6efd; color: white; border: none; border-radius: 20px; padding: 16px; font-weight: 800; width: 100%; text-transform: uppercase; }
-        
-        .anchor-point { display: block; position: relative; top: -190px; visibility: hidden; }
-        .version-tag { font-size: 0.7rem; color: #ced4da; text-align: center; padding: 60px 0; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="{{ 'logged-in' if user else '' }}">
 
-<div class="fixed-header shadow">
+<div class="fixed-header">
     <nav class="navbar navbar-light bg-white px-3">
-        <a class="navbar-brand fw-bold fs-2" href="/">&#129373; Claudes Snackshack</a>
+        <a class="navbar-brand" href="/">&#129373; Claudettes Snack Shoppe</a>
         {% if user %}
         <div class="d-flex align-items-center flex-wrap gap-2">
             {% if user.is_admin %}
-                <button class="btn btn-outline-dark btn-lg fw-bold" data-bs-toggle="modal" data-bs-target="#switchboardModal"><i class="fas fa-user-shield me-1"></i> Admin</button>
+                <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#switchboardModal"><i class="fas fa-user-shield me-1"></i> Admin</button>
             {% endif %}
             {% if user.pin %}
-                <form action="{{ url_for('main.pin_clear') }}" method="POST" class="d-inline"><button type="submit" class="btn btn-outline-secondary btn-lg fw-bold"><i class="fas fa-lock me-1"></i> PIN On</button></form>
+                <form action="{{ url_for('main.pin_clear') }}" method="POST" class="d-inline"><button type="submit" class="btn btn-outline-secondary"><i class="fas fa-lock me-1"></i> PIN On</button></form>
             {% else %}
-                <button class="btn btn-outline-secondary btn-lg fw-bold" data-bs-toggle="modal" data-bs-target="#pinSetModal"><i class="fas fa-lock-open me-1"></i> PIN Off</button>
+                <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#pinSetModal"><i class="fas fa-lock-open me-1"></i> PIN Off</button>
             {% endif %}
-            <button class="btn btn-outline-info btn-lg fw-bold" data-bs-toggle="modal" data-bs-target="#emailSettingsModal"><i class="fas fa-envelope me-1"></i> {{ 'Notify' if user.notify_on_purchase else 'Email' }}</button>
-            <span class="me-1 fs-5">Active: <strong class="text-primary">{{ user.first_name }} {{ user.last_name }}</strong></span>
-            <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-3 fs-5 shadow-sm">${{ "%.2f"|format(user.balance) }}</span>
-            <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-lg fw-bold">Logout</a>
+            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#emailSettingsModal"><i class="fas fa-envelope me-1"></i> {{ 'Notify' if user.notify_on_purchase else 'Email' }}</button>
+            <span class="me-1">Active: <strong class="text-primary">{{ user.first_name }} {{ user.last_name }}</strong></span>
+            <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 fs-6">${{ "%.2f"|format(user.balance) }}</span>
+            <a href="{{ url_for('main.logout') }}" class="btn btn-danger">Logout</a>
         </div>
         {% endif %}
     </nav>
     
     {% if not user %}
+        <div class="search-bar-wrap position-relative">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="userSearch" class="search-input" placeholder="Search by name..." autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
         <div class="alphabet-nav">
             {% for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"|list %}
                 <a href="#letter-{{ char }}" class="letter-link">{{ char }}</a>
@@ -76,23 +55,29 @@
 
 <div class="container">
     {% if not user %}
-        <h1 class="text-center mb-5 text-dark fw-bold">Select Your Name</h1>
+        <h2 class="page-title">Select Your Name</h2>
         <div class="row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4 mb-5">
+            <div class="col position-relative">
+                <div class="card h-100 p-4 user-tile text-center" style="border:2px dashed var(--color-primary);background:var(--color-primary-light);cursor:pointer;" data-bs-toggle="modal" data-bs-target="#registerModal">
+                    <div class="initial-avatar" style="background:#E8F0FE;color:var(--color-primary);font-size:2rem;">+</div>
+                    <div class="user-name" style="color:var(--color-primary);">I'm New Here</div>
+                </div>
+            </div>
             {% set ns = namespace(last_char='') %}
             {% for u in users %}
                 {% set current_char = u.first_name[0]|upper %}
-                <div class="col position-relative">
+                <div class="col position-relative user-col" data-name="{{ u.first_name }} {{ u.last_name }}">
                     {% if current_char != ns.last_char %}
                         <span id="letter-{{ current_char }}" class="anchor-point"></span>
                         {% set ns.last_char = current_char %}
                     {% endif %}
                     
                     <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark d-block h-100">
-                        <div class="card h-100 p-4 user-tile text-center shadow-sm">
+                        <div class="card h-100 p-4 user-tile text-center">
                             {% if u.is_admin %}<i class="fas fa-user-shield badge-admin"></i>{% endif %}
                             {% if u.pin %}<i class="fas fa-lock badge-lock"></i>{% endif %}
                             <div class="initial-avatar">{{ u.first_name[0] }}</div>
-                            <div class="fw-bold fs-4">{{ u.first_name }} {{ u.last_name }}</div>
+                            <div class="user-name">{{ u.first_name }} {{ u.last_name }}</div>
                         </div>
                     </a>
                 </div>
@@ -120,7 +105,7 @@
                                 </div>
                             </div>
                             <a href="{{ url_for('main.manual_add', barcode=p.upc_code or 'MISSING') }}" class="text-decoration-none">
-                                <button class="purchase-btn shadow">Purchase</button>
+                                <button class="purchase-btn">Purchase</button>
                             </a>
                         </div>
                     </div>
@@ -133,7 +118,7 @@
 </div>
 
 {% if pin_user %}
-<div id="pinOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
+<div id="pinOverlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;">
     <div style="background:white;border-radius:25px;padding:40px;text-align:center;max-width:380px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
         <div class="initial-avatar mx-auto">{{ pin_user.first_name[0] }}</div>
         <h3 class="fw-bold mb-1">{{ pin_user.first_name }} {{ pin_user.last_name }}</h3>
@@ -305,8 +290,8 @@
             <div class="modal-body p-5 text-center">
                 <h2 class="fw-bold mb-5 text-dark">Admin Switchboard</h2>
                 <div class="row g-4 mb-4">
-                    <div class="col-md-6"><a href="{{ url_for('main.manage_products') }}" class="btn d-flex flex-column align-items-center justify-content-center shadow text-decoration-none text-white" style="height:160px;border-radius:25px;font-size:1.3rem;font-weight:bold;background:#212529;width:100%;"><i class="fas fa-boxes mb-3 fa-2x"></i><br>PRODUCTS</a></div>
-                    <div class="col-md-6"><a href="{{ url_for('main.manage_users') }}" class="btn d-flex flex-column align-items-center justify-content-center shadow text-decoration-none text-white" style="height:160px;border-radius:25px;font-size:1.3rem;font-weight:bold;background:#0d6efd;width:100%;"><i class="fas fa-users mb-3 fa-2x"></i><br>TEAM</a></div>
+                    <div class="col-md-6"><a href="{{ url_for('main.manage_products') }}" class="btn admin-tile-dark shadow text-decoration-none text-white"><i class="fas fa-boxes mb-3 fa-2x"></i><br>PRODUCTS</a></div>
+                    <div class="col-md-6"><a href="{{ url_for('main.manage_users') }}" class="btn admin-tile-primary shadow text-decoration-none text-white"><i class="fas fa-users mb-3 fa-2x"></i><br>TEAM</a></div>
                 </div>
                 <div class="border-top pt-4 mt-4 text-center">
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
@@ -319,6 +304,55 @@
         </div>
     </div>
 </div>
+{% endif %}
+
+{% if not user %}
+<div class="modal fade" id="registerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 25px;">
+            <div class="modal-body p-5 text-center">
+                <div class="initial-avatar mx-auto" style="background:#E8F0FE;color:var(--color-primary);font-size:2rem;width:72px;height:72px;margin-bottom:16px;">+</div>
+                <h3 class="fw-bold mb-1">Welcome!</h3>
+                <p class="text-muted mb-4">Enter your name to get started</p>
+                <form action="{{ url_for('main.register') }}" method="POST">
+                    <div class="mb-3">
+                        <input type="text" name="first_name" class="form-control form-control-lg" placeholder="First Name" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <input type="text" name="last_name" class="form-control form-control-lg" placeholder="Last Name" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">JOIN</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not user %}
+<script>
+    (function() {
+        const searchInput = document.getElementById('userSearch');
+        if (!searchInput) return;
+        const userCols = document.querySelectorAll('.user-col');
+
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            userCols.forEach(function(col) {
+                const name = col.getAttribute('data-name').toLowerCase();
+                col.style.display = (!query || name.includes(query)) ? '' : 'none';
+            });
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                this.dispatchEvent(new Event('input'));
+                this.blur();
+            }
+        });
+    })();
+</script>
 {% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -72,10 +72,16 @@
                 <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" name="is_quick_item" id="formQuick"><label class="form-check-label small fw-bold" for="formQuick">Show on Kiosk Menu</label></div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold text-muted text-uppercase">Product Image</label>
-                    <div id="imagePreviewBox" class="text-center mb-2" style="display:none;">
-                        <img id="imagePreview" src="" alt="Preview" style="max-width:120px;max-height:120px;object-fit:contain;border:1px solid #dee2e6;border-radius:8px;padding:4px;">
+                    <div id="pasteZone" tabindex="0" style="border:2px dashed #dee2e6;border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;">
+                        <div id="imagePreviewBox" style="display:none;">
+                            <img id="imagePreview" src="" alt="Preview" style="max-width:120px;max-height:120px;object-fit:contain;border:1px solid #dee2e6;border-radius:8px;padding:4px;">
+                        </div>
+                        <div id="pasteHint" class="text-muted" style="font-size:0.85rem;">
+                            <i class="fas fa-paste me-1"></i> Paste image (Ctrl+V) or drag &amp; drop<br>
+                            <span style="font-size:0.8rem;color:#adb5bd;">or use the file picker below</span>
+                        </div>
                     </div>
-                    <input type="file" name="product_image" id="formImage" class="form-control" accept="image/png,image/jpeg,image/gif,image/webp">
+                    <input type="file" name="product_image" id="formImage" class="form-control mt-2" accept="image/png,image/jpeg,image/gif,image/webp">
                     <div class="form-text">PNG, JPG, GIF or WebP. Max 2 MB.</div>
                 </div>
                 <button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold mb-2">SAVE CHANGES</button>
@@ -164,16 +170,63 @@
         setTimeout(() => { document.getElementById('formDesc').focus(); }, 500);
     }
 
-    document.getElementById('formImage').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                document.getElementById('imagePreview').src = ev.target.result;
-                document.getElementById('imagePreviewBox').style.display = "block";
-            };
-            reader.readAsDataURL(file);
+    // --- Image paste / drop / file-pick support ---
+    const pasteZone = document.getElementById('pasteZone');
+    const formImage = document.getElementById('formImage');
+    const imagePreview = document.getElementById('imagePreview');
+    const imagePreviewBox = document.getElementById('imagePreviewBox');
+
+    function applyImageFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2 MB.'); return; }
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        formImage.files = dt.files;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            imagePreview.src = ev.target.result;
+            imagePreviewBox.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Paste anywhere in the modal
+    document.getElementById('editModal').addEventListener('paste', function(e) {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                e.preventDefault();
+                applyImageFile(items[i].getAsFile());
+                return;
+            }
         }
+    });
+
+    // Drag & drop on the paste zone
+    pasteZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#0d6efd';
+        this.style.background = '#f0f6ff';
+    });
+    pasteZone.addEventListener('dragleave', function() {
+        this.style.borderColor = '#dee2e6';
+        this.style.background = '';
+    });
+    pasteZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#dee2e6';
+        this.style.background = '';
+        const file = e.dataTransfer.files[0];
+        if (file) applyImageFile(file);
+    });
+
+    // Click paste zone to open file picker
+    pasteZone.addEventListener('click', function() { formImage.click(); });
+
+    // File input change
+    formImage.addEventListener('change', function(e) {
+        if (e.target.files[0]) applyImageFile(e.target.files[0]);
     });
 
     async function lookupProductManual(code) { 
