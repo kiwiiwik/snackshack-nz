@@ -35,8 +35,9 @@
 
 <div class="container-fluid px-4">
     <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>UPC / PLU</th><th>Brand</th><th>Description</th><th>Price</th><th>Stock</th><th class="text-end px-4">Actions</th></tr></thead>
+        <thead class="table-light"><tr><th style="width:60px;"></th><th>UPC / PLU</th><th>Brand</th><th>Description</th><th>Price</th><th>Stock</th><th class="text-end px-4">Actions</th></tr></thead>
         <tbody>{% for p in products %}<tr>
+            <td><img src="{{ url_for('static', filename='images/' + (p.image_url or 'placeholder.png')) }}" onerror="this.src='/static/images/placeholder.png';" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:6px;border:1px solid #eee;"></td>
             <td><code>{{ p.upc_code }}</code></td><td>{{ p.manufacturer or '-' }}</td><td class="fw-bold">{{ p.description }}</td><td class="text-success fw-bold">${{ "%.2f"|format(p.price) }}</td>
             <td><span class="badge bg-light text-dark border">{{ p.stock_level }}</span></td>
             <td class="text-end px-4">
@@ -84,6 +85,7 @@
                     <input type="file" name="product_image" id="formImage" class="form-control mt-2" accept="image/png,image/jpeg,image/gif,image/webp">
                     <div class="form-text">PNG, JPG, GIF or WebP. Max 2 MB.</div>
                 </div>
+                <input type="hidden" name="image_base64" id="formImageBase64" value="">
                 <button type="submit" class="btn btn-primary w-100 py-3 shadow fw-bold mb-2">SAVE CHANGES</button>
             </div>
             
@@ -145,6 +147,7 @@
         document.getElementById('formSize').value = ""; document.getElementById('formPrice').value = "2.50";
         document.getElementById('formStock').value = "0"; document.getElementById('formQuick').checked = true;
         document.getElementById('formImage').value = "";
+        document.getElementById('formImageBase64').value = "";
         document.getElementById('imagePreviewBox').style.display = "none";
         setTimeout(() => { upc.focus(); }, 500);
     }
@@ -161,6 +164,7 @@
         document.getElementById('formStock').value = (p?.stock_level ?? "");
         document.getElementById('formQuick').checked = !!p?.is_quick_item;
         document.getElementById('formImage').value = "";
+        document.getElementById('formImageBase64').value = "";
         if (p?.image_url) {
             document.getElementById('imagePreview').src = "/static/images/" + p.image_url;
             document.getElementById('imagePreviewBox').style.display = "block";
@@ -179,13 +183,17 @@
     function applyImageFile(file) {
         if (!file || !file.type.startsWith('image/')) return;
         if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2 MB.'); return; }
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        formImage.files = dt.files;
+        try {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            formImage.files = dt.files;
+        } catch(e) { /* DataTransfer not supported */ }
         const reader = new FileReader();
         reader.onload = function(ev) {
             imagePreview.src = ev.target.result;
             imagePreviewBox.style.display = 'block';
+            // Store base64 as fallback for paste/drop (in case file input wasn't set)
+            document.getElementById('formImageBase64').value = ev.target.result;
         };
         reader.readAsDataURL(file);
     }

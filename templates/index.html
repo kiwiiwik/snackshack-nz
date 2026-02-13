@@ -307,26 +307,194 @@
 {% endif %}
 
 {% if not user %}
-<div class="modal fade" id="registerModal" tabindex="-1">
+<div class="modal fade" id="registerModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg border-0" style="border-radius: 25px;">
-            <div class="modal-body p-5 text-center">
+            <div class="modal-body p-4 p-md-5 text-center">
+                <button type="button" class="btn-close position-absolute" style="top:16px;right:16px;width:44px;height:44px;padding:14px;" data-bs-dismiss="modal" aria-label="Close"></button>
                 <div class="initial-avatar mx-auto" style="background:#E8F0FE;color:var(--color-primary);font-size:2rem;width:72px;height:72px;margin-bottom:16px;">+</div>
                 <h3 class="fw-bold mb-1">Welcome!</h3>
                 <p class="text-muted mb-4">Enter your name to get started</p>
-                <form action="{{ url_for('main.register') }}" method="POST">
-                    <div class="mb-3">
-                        <input type="text" name="first_name" class="form-control form-control-lg" placeholder="First Name" required autofocus>
+                <form action="{{ url_for('main.register') }}" method="POST" id="registerForm">
+                    <!-- Step 1: Name -->
+                    <div id="regStep1">
+                        <div class="mb-3">
+                            <input type="text" name="first_name" id="regFirstName" class="form-control form-control-lg reg-input" placeholder="First Name" required readonly>
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" name="last_name" id="regLastName" class="form-control form-control-lg reg-input" placeholder="Last Name" required readonly>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-bottom:12px;" id="regKeyboard">
+                        </div>
+                        <div style="display:flex;gap:6px;margin-bottom:16px;">
+                            <button type="button" class="btn btn-light flex-grow-1 py-3 fw-bold" onclick="regToggleCase()">ABC</button>
+                            <button type="button" class="btn btn-light flex-grow-1 py-3 fw-bold" onclick="regAddChar(' ')">SPACE</button>
+                            <button type="button" class="btn btn-outline-secondary flex-grow-1 py-3 fw-bold" onclick="regBackspace()"><i class="fas fa-backspace"></i></button>
+                        </div>
+                        <button type="button" class="btn btn-primary w-100 py-3 fw-bold" onclick="regNextStep()">NEXT</button>
                     </div>
-                    <div class="mb-3">
-                        <input type="text" name="last_name" class="form-control form-control-lg" placeholder="Last Name" required>
+                    <!-- Step 2: Notification preference -->
+                    <div id="regStep2" style="display:none;">
+                        <p class="mb-3 fw-bold fs-5">Would you like email notifications when purchases are made on your account?</p>
+                        <input type="hidden" name="want_notifications" id="regWantNotify" value="no">
+                        <button type="button" class="btn btn-success w-100 py-3 fw-bold mb-3" onclick="regWantNotifications(true)">YES PLEASE</button>
+                        <button type="button" class="btn btn-outline-secondary w-100 py-3 fw-bold" onclick="regWantNotifications(false)">NO THANKS</button>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">JOIN</button>
+                    <!-- Step 3: Email + Phone (only if yes) -->
+                    <div id="regStep3" style="display:none;">
+                        <p class="text-muted mb-3">We'll send a code to your mobile to verify your email. Your cell number is only used for this one-time verification and is not stored.</p>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Email Address</label>
+                            <input type="email" name="email" id="regEmail" class="form-control form-control-lg reg-input" placeholder="you@example.com" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Mobile Number (for verification only)</label>
+                            <input type="tel" name="phone" id="regPhone" class="form-control form-control-lg text-center fw-bold" maxlength="13" placeholder="021 123 4567" readonly>
+                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:260px;margin:10px auto 0;">
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('1')">1</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('2')">2</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('3')">3</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('4')">4</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('5')">5</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('6')">6</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('7')">7</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('8')">8</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('9')">9</button>
+                                <button type="button" class="btn btn-outline-secondary btn-lg fw-bold fs-5 py-3" onclick="regPhoneClear()">Clear</button>
+                                <button type="button" class="btn btn-light btn-lg fw-bold fs-3 py-3" onclick="regPhoneKey('0')">0</button>
+                                <button type="button" class="btn btn-outline-secondary btn-lg fw-bold fs-5 py-3" onclick="regPhoneBack()">&larr;</button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-3 fw-bold mt-2">SUBMIT</button>
+                    </div>
+                    <!-- Step 4: Success / waiting (60s timeout) -->
+                    <div id="regStep4" style="display:none;">
+                        <div class="mb-3">
+                            <i class="fas fa-check-circle text-success" style="font-size:3rem;"></i>
+                        </div>
+                        <h4 class="fw-bold mb-2">You're all set!</h4>
+                        <p class="text-muted mb-3">If you requested notifications, grab your phone and enter the verification code on the next screen.</p>
+                        <p class="fw-bold fs-4">Submitting in <span id="regCountdown">60</span>s...</p>
+                        <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">GO NOW</button>
+                    </div>
                 </form>
+                <button type="button" class="btn btn-outline-secondary w-100 py-2 fw-bold mt-3" data-bs-dismiss="modal">Cancel</button>
             </div>
         </div>
     </div>
 </div>
+<script>
+(function() {
+    var regActiveInput = null;
+    var regUpperCase = true;
+    var regAlpha = 'abcdefghijklmnopqrstuvwxyz';
+    var regSpecial = ".-'@_";
+    var kbContainer = document.getElementById('regKeyboard');
+
+    function renderRegKb() {
+        kbContainer.innerHTML = '';
+        var chars = regAlpha + regSpecial;
+        chars.split('').forEach(function(c) {
+            var d = regUpperCase ? c.toUpperCase() : c;
+            var btn = document.createElement('div');
+            btn.className = 'btn btn-light fw-bold py-2';
+            btn.style.cssText = 'font-size:1.1rem;min-height:48px;display:flex;align-items:center;justify-content:center;';
+            btn.textContent = d;
+            btn.onclick = function() { regAddChar(d); };
+            kbContainer.appendChild(btn);
+        });
+    }
+
+    window.regAddChar = function(c) {
+        if (regActiveInput) {
+            regActiveInput.value += c;
+            regActiveInput.dispatchEvent(new Event('input'));
+        }
+    };
+    window.regBackspace = function() {
+        if (regActiveInput) {
+            regActiveInput.value = regActiveInput.value.slice(0, -1);
+        }
+    };
+    window.regToggleCase = function() {
+        regUpperCase = !regUpperCase;
+        renderRegKb();
+    };
+
+    document.querySelectorAll('.reg-input').forEach(function(el) {
+        el.addEventListener('focus', function() { regActiveInput = this; });
+        el.addEventListener('click', function() { regActiveInput = this; });
+    });
+
+    // Auto-focus first name on modal open
+    var regModal = document.getElementById('registerModal');
+    if (regModal) {
+        regModal.addEventListener('shown.bs.modal', function() {
+            regActiveInput = document.getElementById('regFirstName');
+            regActiveInput.focus();
+        });
+    }
+
+    window.regNextStep = function() {
+        var fn = document.getElementById('regFirstName').value.trim();
+        var ln = document.getElementById('regLastName').value.trim();
+        if (!fn || !ln) { alert('Please enter both first and last name.'); return; }
+        document.getElementById('regStep1').style.display = 'none';
+        document.getElementById('regStep2').style.display = 'block';
+    };
+
+    window.regWantNotifications = function(yes) {
+        document.getElementById('regWantNotify').value = yes ? 'yes' : 'no';
+        if (yes) {
+            document.getElementById('regStep2').style.display = 'none';
+            document.getElementById('regStep3').style.display = 'block';
+            regActiveInput = document.getElementById('regEmail');
+        } else {
+            // Skip to countdown then submit
+            document.getElementById('regStep2').style.display = 'none';
+            document.getElementById('regStep4').style.display = 'block';
+            startRegCountdown();
+        }
+    };
+
+    window.regPhoneKey = function(d) { var el = document.getElementById('regPhone'); if (el.value.length < 13) el.value += d; };
+    window.regPhoneClear = function() { document.getElementById('regPhone').value = ''; };
+    window.regPhoneBack = function() { var el = document.getElementById('regPhone'); el.value = el.value.slice(0, -1); };
+
+    var countdownInterval;
+    function startRegCountdown() {
+        var seconds = 60;
+        var el = document.getElementById('regCountdown');
+        el.textContent = seconds;
+        countdownInterval = setInterval(function() {
+            seconds--;
+            el.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(countdownInterval);
+                document.getElementById('registerForm').submit();
+            }
+        }, 1000);
+    }
+
+    // If form is submitted from step 3, show countdown first
+    var regForm = document.getElementById('registerForm');
+    var step3Submit = document.querySelector('#regStep3 button[type="submit"]');
+    if (step3Submit) {
+        step3Submit.addEventListener('click', function(e) {
+            e.preventDefault();
+            var email = document.getElementById('regEmail').value.trim();
+            var phone = document.getElementById('regPhone').value.trim();
+            if (!email) { alert('Please enter your email address.'); return; }
+            if (!phone || phone.length < 9) { alert('Please enter a valid mobile number.'); return; }
+            document.getElementById('regStep3').style.display = 'none';
+            document.getElementById('regStep4').style.display = 'block';
+            startRegCountdown();
+        });
+    }
+
+    renderRegKb();
+})();
+</script>
 {% endif %}
 
 {% if not user %}
@@ -362,7 +530,7 @@
     function resetTimer() {
         clearTimeout(logoutTimer);
         if (document.querySelector('.modal.show')) return;
-        logoutTimer = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 15000);
+        logoutTimer = setTimeout(() => { window.location.href = "{{ url_for('main.logout') }}"; }, 30000);
     }
     ['mousedown', 'touchstart', 'click', 'keydown'].forEach(evt => window.addEventListener(evt, resetTimer, false));
     document.addEventListener('hidden.bs.modal', resetTimer);

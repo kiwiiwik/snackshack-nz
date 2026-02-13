@@ -20,7 +20,12 @@
 <nav class="navbar navbar-dark bg-primary mb-4 shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold fs-4" href="/"><i class="fas fa-arrow-left me-2"></i> Back to Kiosk</a>
-        <button class="btn btn-light fw-bold shadow-sm py-2 px-4" data-bs-toggle="modal" data-bs-target="#userModal" onclick="clearUserForm()"><i class="fas fa-user-plus me-1"></i> Add New Team Member</button>
+        <div class="d-flex gap-2">
+            <form action="{{ url_for('main.purge_users') }}" method="POST" class="d-inline" onsubmit="return confirm('Delete all users who have NEVER made a purchase? This cannot be undone.');">
+                <button type="submit" class="btn btn-outline-light fw-bold shadow-sm py-2 px-4"><i class="fas fa-broom me-1"></i> Purge Inactive</button>
+            </form>
+            <button class="btn btn-light fw-bold shadow-sm py-2 px-4" data-bs-toggle="modal" data-bs-target="#userModal" onclick="clearUserForm()"><i class="fas fa-user-plus me-1"></i> Add New Team Member</button>
+        </div>
     </div>
 </nav>
 
