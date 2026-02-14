@@ -2,6 +2,7 @@ import os
 import re
 import base64
 import random
+import hashlib
 import smtplib
 import threading
 from email.mime.text import MIMEText
@@ -15,6 +16,11 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def hash_pin(pin):
+    """Hash a 4-digit PIN with the app secret key as salt."""
+    salt = os.environ.get('FLASK_SECRET_KEY', 'dev-key-default-123')
+    return hashlib.sha256(f"{salt}:{pin}".encode()).hexdigest()
 
 AVATAR_OPTIONS = [
     'cookie', 'cupcake', 'donut', 'icecream', 'pizza', 'taco',
@@ -290,14 +296,14 @@ def product_image(upc):
 def pin_verify():
     uid, pin = request.form.get('user_id'), request.form.get('pin', '').strip()
     u = Users.query.get(int(uid))
-    if u and str(u.pin) == pin: session['user_id'] = u.user_id; return redirect(url_for('main.index'))
+    if u and u.pin == hash_pin(pin): session['user_id'] = u.user_id; return redirect(url_for('main.index'))
     flash("Incorrect PIN.", "danger"); return redirect(url_for('main.index', needs_pin=uid))
 
 @main.route('/pin_set', methods=['POST'])
 def pin_set():
     if 'user_id' in session:
         u, pin = Users.query.get(int(session['user_id'])), request.form.get('pin', '').strip()
-        if u and pin.isdigit() and len(pin) == 4: u.pin = pin; db.session.commit(); flash("PIN enabled.", "success")
+        if u and pin.isdigit() and len(pin) == 4: u.pin = hash_pin(pin); db.session.commit(); flash("PIN enabled.", "success")
     return redirect(url_for('main.index'))
 
 @main.route('/pin_clear', methods=['POST'])

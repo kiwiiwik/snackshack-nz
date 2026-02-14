@@ -11,7 +11,7 @@ class Users(db.Model):
     card_id = db.Column('Card_ID', db.String(50), unique=True)
     balance = db.Column('Balance', db.Numeric(10, 2), default=0.00)
     last_seen = db.Column('last_seen', db.DateTime, default=datetime.utcnow)
-    pin = db.Column('PIN', db.String(4))
+    pin = db.Column('PIN', db.String(64))
     email = db.Column('Email_Address', db.String(100))
     notify_on_purchase = db.Column('Notify_On_Purchase', db.Boolean, default=False)
     phone_number = db.Column('Phone_Number', db.String(20))
