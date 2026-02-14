@@ -254,14 +254,24 @@ def save_product_manual():
 
     # Store image as base64 in DB so it persists across Azure redeploys
     file = request.files.get('product_image')
-    if file and file.filename and allowed_file(file.filename):
-        ext = file.filename.rsplit('.', 1)[1].lower()
-        raw = file.read()
-        if len(raw) <= 2 * 1024 * 1024:
-            mime = 'jpeg' if ext == 'jpg' else ext
-            p.image_data = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
-            p.image_url = secure_filename(f"{upc}.{ext}")
-    else:
+    img_saved = False
+    if file:
+        # Determine type from filename or MIME type (clipboard pastes may lack a filename)
+        mime = None
+        if file.filename and '.' in file.filename:
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            if ext in ALLOWED_EXTENSIONS:
+                mime = 'jpeg' if ext == 'jpg' else ext
+        if not mime and file.content_type:
+            mime_map = {'image/png': 'png', 'image/jpeg': 'jpeg', 'image/webp': 'webp', 'image/gif': 'gif'}
+            mime = mime_map.get(file.content_type.lower())
+        if mime:
+            raw = file.read()
+            if len(raw) <= 2 * 1024 * 1024:
+                p.image_data = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
+                p.image_url = secure_filename(f"{upc}.{'jpg' if mime == 'jpeg' else mime}")
+                img_saved = True
+    if not img_saved:
         b64_data = request.form.get('image_base64', '').strip()
         if b64_data:
             match = re.match(r'^data:image/(png|jpe?g|gif|webp);base64,(.+)$', b64_data, re.DOTALL)

@@ -189,20 +189,34 @@
 
     function applyImageFile(file) {
         if (!file || !file.type.startsWith('image/')) return;
-        if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2 MB.'); return; }
-        try {
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            formImage.files = dt.files;
-        } catch(e) { /* DataTransfer not supported */ }
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            imagePreview.src = ev.target.result;
-            imagePreviewBox.style.display = 'block';
-            // Store base64 as fallback for paste/drop (in case file input wasn't set)
-            document.getElementById('formImageBase64').value = ev.target.result;
+        // Resize large images client-side via canvas (max 512px, JPEG 85%)
+        const img = new Image();
+        img.onload = function() {
+            const MAX = 512;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob(function(blob) {
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(new File([blob], 'product.jpg', {type: 'image/jpeg'}));
+                    formImage.files = dt.files;
+                } catch(e) { /* DataTransfer not supported */ }
+                const reader2 = new FileReader();
+                reader2.onload = function(ev2) {
+                    imagePreview.src = ev2.target.result;
+                    imagePreviewBox.style.display = 'block';
+                    document.getElementById('formImageBase64').value = ev2.target.result;
+                };
+                reader2.readAsDataURL(blob);
+            }, 'image/jpeg', 0.85);
         };
-        reader.readAsDataURL(file);
+        img.src = URL.createObjectURL(file);
     }
 
     // Paste anywhere in the modal
