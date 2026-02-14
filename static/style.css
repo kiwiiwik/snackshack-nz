@@ -522,4 +522,123 @@ body.logged-in {
 
 /* ---- Utility (preserved for other templates) ---- */
 
+/* ============================================================
+   Mobile Site (m. subdomain) Overrides
+   ============================================================ */
+
+body.mobile-site {
+    --header-height-logged-out: 110px;
+    --header-height-logged-in: 70px;
+}
+
+body.mobile-site .navbar {
+    padding: 8px 12px;
+}
+
+body.mobile-site .navbar-brand {
+    font-size: 1.1rem;
+}
+
+/* --- Mobile User List (compact rows) --- */
+
+.mobile-user-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--color-surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+}
+
+.mobile-user-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: var(--color-text-primary);
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    transition: var(--transition-fast);
+}
+
+.mobile-user-row:last-child {
+    border-bottom: none;
+}
+
+.mobile-user-row:hover,
+.mobile-user-row:active {
+    background: var(--color-primary-light);
+}
+
+.mobile-user-row:active {
+    transform: scale(0.99);
+}
+
+.mobile-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-circle);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.mobile-avatar-letter {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-circle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.mobile-user-name {
+    font-weight: 500;
+    font-size: 1rem;
+    flex: 1;
+}
+
+/* --- Mobile Product Cards --- */
+
+body.mobile-site .product-card {
+    padding: 16px;
+}
+
+body.mobile-site .product-img {
+    width: 70px;
+    height: 70px;
+}
+
+body.mobile-site .purchase-btn {
+    padding: 16px;
+    font-size: 1.05rem;
+}
+
+/* --- Mobile Page Title --- */
+
+body.mobile-site .page-title {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+}
+
+/* --- Mobile Category Nav --- */
+
+body.mobile-site .category-nav {
+    padding: 8px 12px;
+    gap: 6px;
+}
+
+body.mobile-site .nav-chip {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+}
+
+/* ---- Utility (preserved for other templates) ---- */
+
 .hidden { display: none !important; }
