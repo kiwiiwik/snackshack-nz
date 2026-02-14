@@ -67,11 +67,11 @@
     </nav>
     
     {% if not user %}
+        {% if not is_mobile %}
         <div class="search-bar-wrap position-relative">
             <i class="fas fa-search search-icon"></i>
             <input type="text" id="userSearch" class="search-input" placeholder="Search by name..." autocomplete="off" autocorrect="off" spellcheck="false">
         </div>
-        {% if not is_mobile %}
         <div class="alphabet-nav">
             {% for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"|list %}
                 <a href="#letter-{{ char }}" class="letter-link">{{ char }}</a>
