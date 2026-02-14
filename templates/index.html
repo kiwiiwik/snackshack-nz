@@ -87,6 +87,17 @@
     {% endif %}
 </div>
 
+{% if user and not is_mobile %}
+<nav class="category-sidebar">
+    {% for category in grouped_products.keys() %}
+    <a href="#cat-{{ loop.index }}" class="sidebar-link" data-cat="{{ loop.index }}">
+        <i class="fas fa-{% if category.lower() == 'drinks' %}mug-hot{% elif category.lower() == 'snacks' %}cookie-bite{% elif category.lower() == 'candy' %}candy-cane{% elif category.lower() == 'frozen' %}snowflake{% elif category.lower() == 'coffee pods' %}coffee{% elif category.lower() == 'sweepstake tickets' %}ticket{% else %}tag{% endif %}"></i>
+        {{ category }}
+    </a>
+    {% endfor %}
+</nav>
+{% endif %}
+
 <div class="container">
     {% if not user %}
         {% if is_mobile %}
@@ -724,10 +735,25 @@
             if (items[i].type.indexOf('image/') === 0) {
                 e.preventDefault();
                 var blob = items[i].getAsFile();
-                var dt = new DataTransfer();
-                dt.items.add(blob);
-                fileInput.files = dt.files;
-                form.submit();
+                zone.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Resizing...';
+                var img = new Image();
+                img.onload = function() {
+                    var MAX = 256, w = img.width, h = img.height;
+                    if (w > MAX || h > MAX) {
+                        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                        else { w = Math.round(w * MAX / h); h = MAX; }
+                    }
+                    var canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    canvas.toBlob(function(resized) {
+                        var dt = new DataTransfer();
+                        dt.items.add(new File([resized], 'avatar.jpg', {type: 'image/jpeg'}));
+                        fileInput.files = dt.files;
+                        form.submit();
+                    }, 'image/jpeg', 0.85);
+                };
+                img.src = URL.createObjectURL(blob);
                 return;
             }
         }
@@ -755,6 +781,38 @@
     {% endif %}
     {% if verify_email and user %}
     window.addEventListener('load', function() { new bootstrap.Modal(document.getElementById('emailSettingsModal')).show(); });
+    {% endif %}
+
+    {% if user and not is_mobile %}
+    // Category sidebar: smooth scroll + active highlight
+    (function() {
+        var links = document.querySelectorAll('.sidebar-link');
+        var sections = [];
+        links.forEach(function(link) {
+            var id = link.getAttribute('href').substring(1);
+            var el = document.getElementById(id);
+            if (el) sections.push({ el: el, link: link });
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                var target = document.getElementById(id);
+                if (target) {
+                    var offset = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height-logged-in')) || 120;
+                    window.scrollTo({ top: target.offsetTop - offset - 10, behavior: 'smooth' });
+                }
+            });
+        });
+        function updateActive() {
+            var scrollY = window.scrollY + 160;
+            var current = null;
+            sections.forEach(function(s) {
+                if (s.el.offsetTop <= scrollY) current = s;
+            });
+            links.forEach(function(l) { l.classList.remove('active'); });
+            if (current) current.link.classList.add('active');
+        }
+        window.addEventListener('scroll', updateActive, { passive: true });
+        updateActive();
+    })();
     {% endif %}
 </script>
 </body>
