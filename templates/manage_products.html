@@ -58,7 +58,14 @@
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Category</label>
-                        <select name="category" id="formCat" class="form-select"><option value="Drinks">Drinks</option><option value="Snacks">Snacks</option><option value="Candy">Candy</option><option value="Frozen">Frozen</option><option value="Coffee Pods">Coffee Pods</option><option value="Sweepstake Tickets">Sweepstake Tickets</option></select>
+                        <select name="category" id="formCat" class="form-select" onchange="if(this.value==='__new__'){this.style.display='none';document.getElementById('newCatWrap').style.display='flex';}">
+                            {% for cat in categories %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
+                            <option value="__new__">+ Add new...</option>
+                        </select>
+                        <div id="newCatWrap" style="display:none;" class="input-group">
+                            <input type="text" id="newCatInput" class="form-control vk-input" placeholder="New category">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="var s=document.getElementById('formCat'),v=document.getElementById('newCatInput').value.trim();if(v){var o=new Option(v,v);s.add(o,s.options.length-1);s.value=v;}s.style.display='';document.getElementById('newCatWrap').style.display='none';">OK</button>
+                        </div>
                     </div>
                     <div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Price ($)</label>
                         <input type="number" step="0.01" name="price" id="formPrice" class="form-control vk-input">

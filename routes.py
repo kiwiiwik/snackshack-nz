@@ -196,7 +196,9 @@ def index():
     cat_order = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
     grouped = {cat: [] for cat in cat_order}
     for p in Products.query.filter_by(is_quick_item=True).all():
-        cat = p.category if p.category in grouped else "Snacks"
+        cat = p.category or "Snacks"
+        if cat not in grouped:
+            grouped[cat] = []
         grouped[cat].append(p)
 
     return render_template('index.html',
@@ -236,7 +238,10 @@ def undo():
 @main.route('/admin/products')
 def manage_products():
     if 'user_id' not in session: return redirect(url_for('main.index'))
-    return render_template('manage_products.html', products=Products.query.order_by(Products.description).all())
+    default_cats = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
+    db_cats = [r[0] for r in db.session.query(Products.category).distinct() if r[0]]
+    categories = list(dict.fromkeys(default_cats + db_cats))  # preserve order, deduplicate
+    return render_template('manage_products.html', products=Products.query.order_by(Products.description).all(), categories=categories)
 
 @main.route('/admin/product/save', methods=['POST'])
 def save_product_manual():
