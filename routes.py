@@ -508,9 +508,10 @@ def delete_user(user_id):
     user = Users.query.get(user_id)
     if user and int(session.get('user_id')) != user_id:
         try:
+            Transactions.query.filter_by(user_id=user_id).delete()
             db.session.delete(user); db.session.commit()
-        except IntegrityError:
-            db.session.rollback(); flash("User has history; delete failed.", "danger")
+        except Exception:
+            db.session.rollback(); flash("Could not delete user.", "danger")
     return redirect(url_for('main.manage_users'))
 
 @main.route('/admin/users/purge', methods=['POST'])
