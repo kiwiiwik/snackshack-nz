@@ -187,7 +187,7 @@ body.logged-in {
 /* ---- Category Navigation (logged in) ---- */
 
 .category-nav {
-    display: flex;
+    display: none;  /* hidden on desktop kiosk, shown on mobile */
     overflow-x: auto;
     white-space: nowrap;
     padding: 10px 16px;
@@ -213,6 +213,59 @@ body.logged-in {
     background: var(--color-primary-light);
     border-color: var(--color-primary);
     color: var(--color-primary);
+}
+
+/* ---- Category Sidebar (kiosk desktop only) ---- */
+
+.category-sidebar {
+    position: fixed;
+    top: var(--header-height-logged-in);
+    left: 0;
+    bottom: 0;
+    width: 180px;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-border);
+    overflow-y: auto;
+    padding: 16px 0;
+    z-index: 1000;
+    scrollbar-width: none;
+}
+.category-sidebar::-webkit-scrollbar { display: none; }
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    text-decoration: none;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    font-size: 0.95rem;
+    border-left: 3px solid transparent;
+    transition: var(--transition-base);
+}
+
+.sidebar-link:hover {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+}
+
+.sidebar-link.active {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border-left-color: var(--color-primary);
+    font-weight: 600;
+}
+
+.sidebar-link i {
+    width: 20px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+/* Offset main content when sidebar is visible */
+body.logged-in:not(.mobile-site) .container {
+    margin-left: 180px;
 }
 
 /* ---- Page Title ---- */
@@ -630,6 +683,7 @@ body.mobile-site .page-title {
 /* --- Mobile Category Nav --- */
 
 body.mobile-site .category-nav {
+    display: flex;  /* restore horizontal chips on mobile */
     padding: 8px 12px;
     gap: 6px;
 }
@@ -637,6 +691,14 @@ body.mobile-site .category-nav {
 body.mobile-site .nav-chip {
     padding: 6px 14px;
     font-size: 0.85rem;
+}
+
+body.mobile-site .category-sidebar {
+    display: none;
+}
+
+body.mobile-site.logged-in .container {
+    margin-left: auto;
 }
 
 /* ---- Utility (preserved for other templates) ---- */

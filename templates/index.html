@@ -87,6 +87,17 @@
     {% endif %}
 </div>
 
+{% if user and not is_mobile %}
+<nav class="category-sidebar">
+    {% for category in grouped_products.keys() %}
+    <a href="#cat-{{ loop.index }}" class="sidebar-link" data-cat="{{ loop.index }}">
+        <i class="fas fa-{% if category.lower() == 'drinks' %}mug-hot{% elif category.lower() == 'snacks' %}cookie-bite{% elif category.lower() == 'candy' %}candy-cane{% elif category.lower() == 'frozen' %}snowflake{% elif category.lower() == 'coffee pods' %}coffee{% elif category.lower() == 'sweepstake tickets' %}ticket{% else %}tag{% endif %}"></i>
+        {{ category }}
+    </a>
+    {% endfor %}
+</nav>
+{% endif %}
+
 <div class="container">
     {% if not user %}
         {% if is_mobile %}
@@ -770,6 +781,38 @@
     {% endif %}
     {% if verify_email and user %}
     window.addEventListener('load', function() { new bootstrap.Modal(document.getElementById('emailSettingsModal')).show(); });
+    {% endif %}
+
+    {% if user and not is_mobile %}
+    // Category sidebar: smooth scroll + active highlight
+    (function() {
+        var links = document.querySelectorAll('.sidebar-link');
+        var sections = [];
+        links.forEach(function(link) {
+            var id = link.getAttribute('href').substring(1);
+            var el = document.getElementById(id);
+            if (el) sections.push({ el: el, link: link });
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                var target = document.getElementById(id);
+                if (target) {
+                    var offset = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height-logged-in')) || 120;
+                    window.scrollTo({ top: target.offsetTop - offset - 10, behavior: 'smooth' });
+                }
+            });
+        });
+        function updateActive() {
+            var scrollY = window.scrollY + 160;
+            var current = null;
+            sections.forEach(function(s) {
+                if (s.el.offsetTop <= scrollY) current = s;
+            });
+            links.forEach(function(l) { l.classList.remove('active'); });
+            if (current) current.link.classList.add('active');
+        }
+        window.addEventListener('scroll', updateActive, { passive: true });
+        updateActive();
+    })();
     {% endif %}
 </script>
 </body>
