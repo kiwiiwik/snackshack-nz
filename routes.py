@@ -406,14 +406,23 @@ def upload_avatar():
     if not u:
         return redirect(url_for('main.index'))
     file = request.files.get('avatar_photo')
-    if file and file.filename and allowed_file(file.filename):
-        ext = file.filename.rsplit('.', 1)[1].lower()
-        raw = file.read()
-        if len(raw) <= 2 * 1024 * 1024:
-            mime = 'jpeg' if ext == 'jpg' else ext
-            u.avatar_data = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
-            u.avatar = None  # clear preset when uploading custom
-            db.session.commit()
+    if file:
+        # Determine type from filename or fall back to MIME type (for clipboard pastes)
+        mime = None
+        if file.filename and '.' in file.filename:
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            if ext in ALLOWED_EXTENSIONS:
+                mime = 'jpeg' if ext == 'jpg' else ext
+        if not mime and file.content_type:
+            ct = file.content_type.lower()
+            mime_map = {'image/png': 'png', 'image/jpeg': 'jpeg', 'image/webp': 'webp', 'image/gif': 'gif'}
+            mime = mime_map.get(ct)
+        if mime:
+            raw = file.read()
+            if len(raw) <= 2 * 1024 * 1024:
+                u.avatar_data = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
+                u.avatar = None  # clear preset when uploading custom
+                db.session.commit()
     return redirect(url_for('main.index'))
 
 @main.route('/user_avatar/<int:user_id>')
@@ -503,7 +512,8 @@ def save_user():
         role = request.form.get('role', 'user')
         user.is_super_admin = (role == 'super_admin')
         user.is_admin = (role in ('admin', 'super_admin'))
-    else:
+    elif not (user.is_admin or user.is_super_admin):
+        # Non-super-admins can only toggle admin on regular users, never downgrade admins
         user.is_admin = 'is_admin' in request.form
     db.session.commit()
     return redirect(url_for('main.manage_users'))
