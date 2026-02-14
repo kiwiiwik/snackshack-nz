@@ -19,7 +19,7 @@
         {% if user %}
         <div class="d-flex align-items-center flex-wrap gap-2">
             {% if is_mobile %}
-            {# Mobile: compact navbar - avatar, name, balance, settings, logout #}
+            {# Mobile: compact navbar - avatar, name, balance, PIN, settings, logout #}
             <button class="btn btn-outline-secondary p-1" data-bs-toggle="modal" data-bs-target="#avatarPickerModal">
                 {% if user.avatar_data %}
                     <img src="{{ url_for('main.user_avatar', user_id=user.user_id) }}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
@@ -31,6 +31,11 @@
             </button>
             <strong class="text-primary">{{ user.first_name }}</strong>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2">${{ "%.2f"|format(user.balance) }}</span>
+            {% if user.pin %}
+                <form action="{{ url_for('main.pin_clear') }}" method="POST" class="d-inline"><button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fas fa-lock"></i></button></form>
+            {% else %}
+                <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#pinSetModal"><i class="fas fa-lock-open"></i></button>
+            {% endif %}
             <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#emailSettingsModal"><i class="fas fa-envelope"></i></button>
             <a href="{{ url_for('main.logout') }}" class="btn btn-danger btn-sm">Switch</a>
             {% else %}
@@ -424,6 +429,15 @@
                     <!-- Step 1: Name -->
                     <div id="regStep1">
                         <h2 class="fw-bold mb-1">Welcome!</h2>
+                        {% if is_mobile %}
+                        <p class="text-muted mb-4 fs-5">Enter your name</p>
+                        <div class="mb-3">
+                            <input type="text" name="first_name" id="regFirstName" class="form-control form-control-lg fs-4 py-3" placeholder="First Name" required autocomplete="given-name" style="text-align:center;">
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" name="last_name" id="regLastName" class="form-control form-control-lg fs-4 py-3" placeholder="Last Name" required autocomplete="family-name" style="text-align:center;">
+                        </div>
+                        {% else %}
                         <p class="text-muted mb-4 fs-5">Tap on the name fields then use the keyboard below</p>
                         <div class="mb-3">
                             <input type="text" name="first_name" id="regFirstName" class="form-control form-control-lg reg-input fs-4 py-3" placeholder="First Name" required readonly style="text-align:center;">
@@ -438,6 +452,7 @@
                             <button type="button" class="btn btn-light flex-grow-1 py-3 fw-bold fs-5" onclick="regAddChar(' ')">SPACE</button>
                             <button type="button" class="btn btn-outline-secondary flex-grow-1 py-3 fw-bold fs-5" onclick="regBackspace()"><i class="fas fa-backspace"></i></button>
                         </div>
+                        {% endif %}
                         <button type="button" class="btn btn-primary w-100 py-3 fw-bold fs-4" onclick="regNextStep()">NEXT</button>
                     </div>
                     <!-- Step 2: Notification preference -->
@@ -454,6 +469,12 @@
                     <!-- Step 3: Email (with email keyboard) -->
                     <div id="regStep3" style="display:none;">
                         <h3 class="fw-bold mb-2">Enter Your Email</h3>
+                        {% if is_mobile %}
+                        <p class="text-muted mb-3 fs-6">Enter your email address</p>
+                        <div class="mb-3">
+                            <input type="email" name="email" id="regEmail" class="form-control form-control-lg fs-4 py-3" placeholder="you@example.com" autocomplete="email" inputmode="email" style="text-align:center;">
+                        </div>
+                        {% else %}
                         <p class="text-muted mb-3 fs-6">Tap the field then use the keyboard below</p>
                         <div class="mb-3">
                             <input type="email" name="email" id="regEmail" class="form-control form-control-lg reg-input fs-4 py-3" placeholder="you@example.com" readonly style="text-align:center;">
@@ -467,6 +488,7 @@
                             <button type="button" class="btn btn-outline-primary fw-bold py-2" style="font-size:0.85rem;" onclick="regAddChar('.co.nz')">.co.nz</button>
                             <button type="button" class="btn btn-outline-secondary fw-bold py-2" style="font-size:0.85rem;" onclick="regBackspace()"><i class="fas fa-backspace"></i></button>
                         </div>
+                        {% endif %}
                         <button type="button" class="btn btn-primary w-100 py-3 fw-bold fs-4 mt-2" onclick="regGoToPhone()">NEXT</button>
                     </div>
                     <!-- Step 4: Phone number -->
@@ -475,8 +497,9 @@
                         <p class="text-muted mb-1 fs-6">We'll text you a one-time code to verify your email.</p>
                         <p class="text-muted mb-3" style="font-size:0.85rem;"><i class="fas fa-info-circle me-1"></i> Your cell number is <strong>only used for this verification</strong> and is not stored.</p>
                         <div class="mb-3">
-                            <input type="tel" name="phone" id="regPhone" class="form-control form-control-lg text-center fw-bold fs-3 py-3" maxlength="13" placeholder="021 123 4567" readonly>
+                            <input type="tel" name="phone" id="regPhone" class="form-control form-control-lg text-center fw-bold fs-3 py-3" maxlength="13" placeholder="021 123 4567" {{ '' if is_mobile else 'readonly' }} inputmode="tel" autocomplete="tel">
                         </div>
+                        {% if not is_mobile %}
                         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:340px;margin:0 auto 16px;">
                             <button type="button" class="btn btn-light fw-bold fs-2 py-3" style="min-height:64px;" onclick="regPhoneKey('1')">1</button>
                             <button type="button" class="btn btn-light fw-bold fs-2 py-3" style="min-height:64px;" onclick="regPhoneKey('2')">2</button>
@@ -491,6 +514,7 @@
                             <button type="button" class="btn btn-light fw-bold fs-2 py-3" style="min-height:64px;" onclick="regPhoneKey('0')">0</button>
                             <button type="button" class="btn btn-outline-secondary fw-bold fs-4 py-3" style="min-height:64px;" onclick="regPhoneBack()"><i class="fas fa-backspace"></i></button>
                         </div>
+                        {% endif %}
                         <button type="button" class="btn btn-primary w-100 py-3 fw-bold fs-4" id="regPhoneSubmitBtn">SUBMIT</button>
                     </div>
                     <!-- Step 5: Success / waiting (60s timeout) -->
