@@ -69,6 +69,10 @@ static/images/      - Product images (uploaded via admin)
 ```sql
 -- v1.7.0: Add phone number column
 ALTER TABLE Users ADD Phone_Number VARCHAR(20);
+
+-- v1.7.1: Widen PIN column for hashed values, clear existing plaintext PINs
+ALTER TABLE Users ALTER COLUMN PIN VARCHAR(64);
+UPDATE Users SET PIN = NULL WHERE PIN IS NOT NULL;
 ```
 
 ## Current Version

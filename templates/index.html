@@ -370,6 +370,9 @@
                             <input type="file" name="avatar_photo" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="this.form.submit();">
                         </label>
                     </form>
+                    <div id="avatarPasteZone" tabindex="0" style="margin-top:10px;padding:18px 12px;border:2px dashed var(--color-primary);border-radius:var(--radius-md);cursor:pointer;color:var(--color-text-secondary);font-size:0.95rem;outline:none;transition:var(--transition-base);">
+                        <i class="fas fa-paste me-1"></i> Click here then <strong>Ctrl+V</strong> to paste an image
+                    </div>
                     {% if user.avatar_data %}
                     <div class="mt-2">
                         <img src="{{ url_for('main.user_avatar', user_id=user.user_id) }}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid var(--color-primary);">
@@ -408,7 +411,10 @@
                 </div>
                 <div class="border-top pt-4 mt-4 text-center">
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <a href="{{ url_for('main.monthly_report') }}" class="btn btn-sm btn-outline-info">Report</a>
+                        <a href="{{ url_for('main.monthly_report') }}" class="btn btn-sm btn-outline-info">Monthly Report</a>
+                        {% if user.is_super_admin %}
+                        <a href="{{ url_for('main.trigger_nightly_report') }}" class="btn btn-sm btn-outline-info" onclick="return confirm('Email the daily report to all super admins now?')"><i class="fas fa-envelope me-1"></i>Daily Report</a>
+                        {% endif %}
                         <a href="{{ url_for('main.reset_balances') }}" class="btn btn-sm btn-outline-warning fw-bold" onclick="return confirm('Reset all balances to $0?')">Reset Balances</a>
                         <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('PERMANENTLY DELETE ALL TRANSACTION HISTORY?')">NUKE ALL</a>
                     </div>
@@ -692,6 +698,45 @@
             }
         });
     })();
+</script>
+{% endif %}
+
+{% if user %}
+<script>
+(function() {
+    var zone = document.getElementById('avatarPasteZone');
+    if (!zone) return;
+    var form = document.getElementById('avatarUploadForm');
+    var fileInput = form ? form.querySelector('input[type="file"]') : null;
+
+    zone.addEventListener('focus', function() {
+        zone.style.borderColor = 'var(--color-primary)';
+        zone.style.background = 'var(--color-primary-light)';
+    });
+    zone.addEventListener('blur', function() {
+        zone.style.borderColor = 'var(--color-primary)';
+        zone.style.background = '';
+    });
+
+    zone.addEventListener('paste', function(e) {
+        var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image/') === 0) {
+                e.preventDefault();
+                var blob = items[i].getAsFile();
+                var dt = new DataTransfer();
+                dt.items.add(blob);
+                fileInput.files = dt.files;
+                form.submit();
+                return;
+            }
+        }
+        zone.innerHTML = '<i class="fas fa-exclamation-triangle me-1 text-warning"></i> No image found in clipboard';
+        setTimeout(function() {
+            zone.innerHTML = '<i class="fas fa-paste me-1"></i> Click here then <strong>Ctrl+V</strong> to paste an image';
+        }, 2000);
+    });
+})();
 </script>
 {% endif %}
 
