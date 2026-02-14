@@ -10,7 +10,7 @@ import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app, make_response
 from werkzeug.utils import secure_filename
 from models import db, Users, Products, Transactions
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 
@@ -577,3 +577,175 @@ def get_product(barcode):
                 return jsonify({"found": True, "mfg": prod.get("brands", ""), "desc": prod.get("product_name", ""), "size": prod.get("quantity", ""), "soh": 0})
     except: pass
     return jsonify({"found": False})
+
+# --- Nightly Report ---
+
+def generate_nightly_report_html(app):
+    """Build the nightly report HTML with 3 sections. Must be called within app context."""
+    from datetime import timezone
+    import pytz
+    nz = pytz.timezone('Pacific/Auckland')
+    now_nz = datetime.now(nz)
+    today_start = nz.localize(datetime(now_nz.year, now_nz.month, now_nz.day))
+    today_end = today_start + timedelta(days=1)
+    # Convert to UTC for DB queries
+    today_start_utc = today_start.astimezone(pytz.utc).replace(tzinfo=None)
+    today_end_utc = today_end.astimezone(pytz.utc).replace(tzinfo=None)
+    report_date = now_nz.strftime("%A %d %B %Y")
+
+    # --- Section 1: Daily Transactions ---
+    txs = db.session.query(Transactions, Users, Products)\
+        .outerjoin(Users, Users.user_id == Transactions.user_id)\
+        .outerjoin(Products, Products.upc_code == Transactions.upc_code)\
+        .filter(Transactions.transaction_date >= today_start_utc,
+                Transactions.transaction_date < today_end_utc)\
+        .order_by(Transactions.transaction_date).all()
+
+    tx_rows = ""
+    daily_total = 0.0
+    for t, u, p in txs:
+        name = f"{u.first_name or ''} {u.last_name or ''}".strip() if u else "Unknown"
+        desc = p.description if p else "Payment"
+        amt = float(t.amount or 0)
+        daily_total += amt
+        tx_time = t.transaction_date.strftime("%H:%M") if t.transaction_date else ""
+        tx_rows += f"<tr><td>{tx_time}</td><td>{name}</td><td>{desc}</td><td style='text-align:right'>${amt:.2f}</td></tr>\n"
+
+    if not tx_rows:
+        tx_rows = "<tr><td colspan='4' style='text-align:center;color:#999;'>No transactions today</td></tr>"
+
+    # --- Section 2: Running Balances ---
+    users = Users.query.order_by(Users.last_name, Users.first_name).all()
+    bal_rows = ""
+    for u in users:
+        bal = float(u.balance or 0)
+        colour = "#dc3545" if bal < 0 else "#333"
+        bal_rows += f"<tr><td>{u.first_name or ''} {u.last_name or ''}</td><td style='text-align:right;color:{colour};font-weight:bold'>${bal:.2f}</td></tr>\n"
+
+    # --- Section 3: Stock Report (low stock first) ---
+    products = Products.query.order_by(Products.stock_level.asc(), Products.description).all()
+    stock_rows = ""
+    for p in products:
+        soh = p.stock_level or 0
+        if soh <= 3:
+            bg = "#fff3cd"
+            badge = f"<span style='background:#dc3545;color:white;padding:2px 8px;border-radius:10px;font-size:0.8em;'>LOW</span>"
+        elif soh <= 10:
+            bg = ""
+            badge = ""
+        else:
+            bg = ""
+            badge = ""
+        stock_rows += f"<tr style='background:{bg}'><td>{p.description or p.upc_code}</td><td>{p.category or ''}</td><td style='text-align:right;font-weight:bold'>{soh}</td><td>{badge}</td></tr>\n"
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;color:#333;">
+        <div style="background:#1a5276;color:white;padding:20px 24px;border-radius:12px 12px 0 0;">
+            <h1 style="margin:0;font-size:1.5rem;">Snackshack Daily Report</h1>
+            <p style="margin:4px 0 0;opacity:0.85;">{report_date}</p>
+        </div>
+        <div style="padding:20px 24px;background:#f8f9fa;border:1px solid #ddd;">
+
+            <h2 style="color:#1a5276;border-bottom:2px solid #1a5276;padding-bottom:6px;margin-top:0;">
+                Daily Transactions
+            </h2>
+            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                <thead>
+                    <tr style="background:#e9ecef;">
+                        <th style="padding:8px;text-align:left;">Time</th>
+                        <th style="padding:8px;text-align:left;">Staff</th>
+                        <th style="padding:8px;text-align:left;">Product</th>
+                        <th style="padding:8px;text-align:right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>{tx_rows}</tbody>
+                <tfoot>
+                    <tr style="background:#e9ecef;font-weight:bold;">
+                        <td colspan="3" style="padding:8px;">Total</td>
+                        <td style="padding:8px;text-align:right;">${daily_total:.2f}</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <h2 style="color:#1a5276;border-bottom:2px solid #1a5276;padding-bottom:6px;margin-top:24px;">
+                Staff Balances
+            </h2>
+            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                <thead>
+                    <tr style="background:#e9ecef;">
+                        <th style="padding:8px;text-align:left;">Name</th>
+                        <th style="padding:8px;text-align:right;">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>{bal_rows}</tbody>
+            </table>
+
+            <h2 style="color:#1a5276;border-bottom:2px solid #1a5276;padding-bottom:6px;margin-top:24px;">
+                Stock Report
+            </h2>
+            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                <thead>
+                    <tr style="background:#e9ecef;">
+                        <th style="padding:8px;text-align:left;">Product</th>
+                        <th style="padding:8px;text-align:left;">Category</th>
+                        <th style="padding:8px;text-align:right;">Stock</th>
+                        <th style="padding:8px;"></th>
+                    </tr>
+                </thead>
+                <tbody>{stock_rows}</tbody>
+            </table>
+
+            <p style="margin-top:24px;font-size:0.8rem;color:#999;text-align:center;">
+                - Claudes Snackshack -
+            </p>
+        </div>
+    </div>"""
+    return html
+
+def send_nightly_report(app):
+    """Send the nightly report email to all super admins."""
+    with app.app_context():
+        admins = Users.query.filter_by(is_super_admin=True).all()
+        recipients = [a.email for a in admins if a.email]
+        if not recipients:
+            return False
+
+        smtp_host = os.environ.get('SMTP_HOST', 'mail.smtp2go.com')
+        smtp_port = int(os.environ.get('SMTP_PORT', 2525))
+        smtp_user = os.environ.get('SMTP_USER', '')
+        smtp_pass = os.environ.get('SMTP_PASS', '')
+        smtp_from = os.environ.get('SMTP_FROM', smtp_user)
+        if not smtp_user or not smtp_pass:
+            return False
+
+        html = generate_nightly_report_html(app)
+
+        for addr in recipients:
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = f"Snackshack Daily Report - {datetime.now().strftime('%d %b %Y')}"
+            msg['From'] = smtp_from
+            msg['To'] = addr
+            msg.attach(MIMEText(html, 'html'))
+            try:
+                with smtplib.SMTP(smtp_host, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.sendmail(smtp_from, addr, msg.as_string())
+            except Exception:
+                pass
+        return True
+
+@main.route('/admin/send-nightly-report')
+def trigger_nightly_report():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    u = Users.query.get(int(session['user_id']))
+    if not u or not u.is_super_admin:
+        flash("Super admin access required.", "danger")
+        return redirect(url_for('main.index'))
+    result = send_nightly_report(current_app._get_current_object())
+    if result:
+        flash("Daily report emailed!", "success")
+    else:
+        flash("Could not send report - check SMTP settings and super admin emails.", "warning")
+    return redirect(url_for('main.index'))

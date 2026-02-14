@@ -411,7 +411,10 @@
                 </div>
                 <div class="border-top pt-4 mt-4 text-center">
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <a href="{{ url_for('main.monthly_report') }}" class="btn btn-sm btn-outline-info">Report</a>
+                        <a href="{{ url_for('main.monthly_report') }}" class="btn btn-sm btn-outline-info">Monthly Report</a>
+                        {% if user.is_super_admin %}
+                        <a href="{{ url_for('main.trigger_nightly_report') }}" class="btn btn-sm btn-outline-info" onclick="return confirm('Email the daily report to all super admins now?')"><i class="fas fa-envelope me-1"></i>Daily Report</a>
+                        {% endif %}
                         <a href="{{ url_for('main.reset_balances') }}" class="btn btn-sm btn-outline-warning fw-bold" onclick="return confirm('Reset all balances to $0?')">Reset Balances</a>
                         <a href="{{ url_for('main.nuke_transactions') }}" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('PERMANENTLY DELETE ALL TRANSACTION HISTORY?')">NUKE ALL</a>
                     </div>
