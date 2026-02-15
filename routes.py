@@ -340,6 +340,10 @@ def admin_pin_reset(user_id):
         return redirect(url_for('main.index'))
     target = Users.query.get(user_id)
     if target:
+        # Admins can only clear PINs for regular users, super admins can clear anyone's
+        if not current.is_super_admin and (target.is_admin or target.is_super_admin):
+            flash("Only super admins can clear PINs for admins.", "warning")
+            return redirect(url_for('main.manage_users'))
         target.pin = None
         db.session.commit()
         flash(f"PIN cleared for {target.first_name} {target.last_name}.", "info")
