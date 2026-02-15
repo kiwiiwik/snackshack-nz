@@ -390,7 +390,7 @@
                         <label class="btn btn-outline-primary w-100 py-3 fw-bold" style="cursor:pointer;">
                             <i class="fas fa-camera me-2"></i>
                             {% if user.avatar_data %}Change Your Photo{% else %}Upload Your Photo{% endif %}
-                            <input type="file" name="avatar_photo" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="this.form.submit();">
+                            <input type="file" name="avatar_photo" accept="image/png,image/jpeg,image/webp" style="display:none;">
                         </label>
                     </form>
                     <div id="avatarPasteZone" style="margin-top:10px;padding:18px 12px;border:2px dashed var(--color-primary);border-radius:var(--radius-md);color:var(--color-text-secondary);font-size:0.95rem;transition:var(--transition-base);">
@@ -732,13 +732,35 @@
     var form = document.getElementById('avatarUploadForm');
     var fileInput = form ? form.querySelector('input[type="file"]') : null;
 
-    zone.addEventListener('focus', function() {
-        zone.style.borderColor = 'var(--color-primary)';
-        zone.style.background = 'var(--color-primary-light)';
-    });
-    zone.addEventListener('blur', function() {
-        zone.style.borderColor = 'var(--color-primary)';
-        zone.style.background = '';
+    // Shared: resize a blob and submit the upload form
+    function resizeAndUpload(blob) {
+        zone.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Resizing...';
+        var img = new Image();
+        img.onload = function() {
+            var MAX = 256, w = img.width, h = img.height;
+            if (w > MAX || h > MAX) {
+                if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+                else { w = Math.round(w * MAX / h); h = MAX; }
+            }
+            var canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob(function(resized) {
+                var dt = new DataTransfer();
+                dt.items.add(new File([resized], 'avatar.jpg', {type: 'image/jpeg'}));
+                fileInput.files = dt.files;
+                form.submit();
+            }, 'image/jpeg', 0.85);
+        };
+        img.src = URL.createObjectURL(blob);
+    }
+
+    // Intercept file input change to resize before uploading
+    if (fileInput) fileInput.addEventListener('change', function(e) {
+        e.preventDefault();
+        if (fileInput.files && fileInput.files[0]) {
+            resizeAndUpload(fileInput.files[0]);
+        }
     });
 
     // Listen for paste on the entire modal so it works regardless of focus
@@ -748,26 +770,7 @@
         for (var i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image/') === 0) {
                 e.preventDefault();
-                var blob = items[i].getAsFile();
-                zone.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Resizing...';
-                var img = new Image();
-                img.onload = function() {
-                    var MAX = 256, w = img.width, h = img.height;
-                    if (w > MAX || h > MAX) {
-                        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-                        else { w = Math.round(w * MAX / h); h = MAX; }
-                    }
-                    var canvas = document.createElement('canvas');
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    canvas.toBlob(function(resized) {
-                        var dt = new DataTransfer();
-                        dt.items.add(new File([resized], 'avatar.jpg', {type: 'image/jpeg'}));
-                        fileInput.files = dt.files;
-                        form.submit();
-                    }, 'image/jpeg', 0.85);
-                };
-                img.src = URL.createObjectURL(blob);
+                resizeAndUpload(items[i].getAsFile());
                 return;
             }
         }
