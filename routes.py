@@ -668,7 +668,7 @@ def generate_nightly_report_html(app):
         desc = p.description if p else "Payment"
         amt = float(t.amount or 0)
         daily_total += amt
-        tx_time = t.transaction_date.strftime("%H:%M") if t.transaction_date else ""
+        tx_time = pytz.utc.localize(t.transaction_date).astimezone(nz).strftime("%H:%M") if t.transaction_date else ""
         tx_rows += f"<tr><td>{tx_time}</td><td>{name}</td><td>{desc}</td><td style='text-align:right'>${amt:.2f}</td></tr>\n"
 
     if not tx_rows:
