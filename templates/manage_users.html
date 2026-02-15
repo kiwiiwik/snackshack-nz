@@ -43,7 +43,7 @@
             <td class="text-end px-4">
                 <button type="button" class="btn btn-success shadow-sm touch-action" onclick='openPaymentModal({{ u.user_id }}, "{{ u.first_name }}")'><i class="fas fa-hand-holding-dollar"></i></button>
                 <button type="button" class="btn btn-outline-primary shadow-sm ms-2 touch-action" onclick='editUser({{ u.to_dict() | tojson }})'><i class="fas fa-edit"></i></button>
-                {% if u.pin %}<form action="{{ url_for('main.admin_pin_reset', user_id=u.user_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Clear PIN for {{ u.first_name }}?');"><button type="submit" class="btn btn-outline-warning shadow-sm ms-2 touch-action" title="Clear PIN"><i class="fas fa-lock-open"></i></button></form>{% endif %}
+                {% if u.pin and (current_user.is_super_admin or not (u.is_admin or u.is_super_admin)) %}<form action="{{ url_for('main.admin_pin_reset', user_id=u.user_id) }}" method="POST" class="d-inline" onsubmit="return confirm('Clear PIN for {{ u.first_name }}?');"><button type="submit" class="btn btn-outline-warning shadow-sm ms-2 touch-action" title="Clear PIN"><i class="fas fa-lock-open"></i></button></form>{% endif %}
                 <a href="{{ url_for('main.delete_user', user_id=u.user_id) }}" class="btn btn-outline-danger shadow-sm ms-2 touch-action" onclick="return confirm('Delete member?')"><i class="fas fa-trash"></i></a>
             </td>
         </tr>{% endfor %}</tbody></table></div></div>
