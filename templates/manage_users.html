@@ -36,7 +36,7 @@
     
     <div class="card table-card shadow-sm"><div class="card-body p-0"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Name</th><th>Card ID</th><th>Balance</th><th>Role</th><th class="text-end px-4">Actions</th></tr></thead>
         <tbody>{% for u in users %}<tr>
-            <td class="fw-bold">{{ u.first_name }} {{ u.last_name }}</td>
+            <td class="fw-bold">{{ u.first_name }} {{ u.last_name }}{% if u.screen_name %} <span class="badge bg-info text-dark fw-normal">{{ u.screen_name }}</span>{% endif %}</td>
             <td><code>{{ u.card_id }}</code></td>
             <td class="{{ 'text-danger' if u.balance < 0 else 'text-success' }} fw-bold">${{ "%.2f"|format(u.balance) }}</td>
             <td>{% if u.is_super_admin %}<span class="badge bg-warning text-dark"><i class="fas fa-crown me-1"></i>Super Admin</span>{% elif u.is_admin %}<span class="badge bg-danger">Admin</span>{% else %}<span class="badge bg-secondary">User</span>{% endif %}</td>
@@ -60,6 +60,7 @@
         <input type="hidden" name="user_id" id="formUserId">
         <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Card / Barcode ID</label><input type="text" name="card_id" id="formCardId" class="form-control" required></div>
         <div class="row g-2 mb-3"><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">First Name</label><input type="text" name="first_name" id="formFirstName" class="form-control" required></div><div class="col-6"><label class="form-label small fw-bold text-muted text-uppercase">Last Name</label><input type="text" name="last_name" id="formLastName" class="form-control" required></div></div>
+        <div class="mb-3"><label class="form-label small fw-bold text-muted text-uppercase">Screen Name <span class="fw-normal text-secondary">(optional)</span></label><input type="text" name="screen_name" id="formScreenName" class="form-control" placeholder="Shown on kiosk instead of real name" maxlength="50"></div>
         {% if current_user and current_user.is_super_admin %}
         <div class="mb-3">
             <label class="form-label small fw-bold text-muted text-uppercase">Role</label>
@@ -85,6 +86,7 @@
         document.getElementById('formUserId').value = "";
         document.getElementById('formCardId').value = ""; document.getElementById('formCardId').readOnly = false;
         document.getElementById('formFirstName').value = ""; document.getElementById('formLastName').value = "";
+        document.getElementById('formScreenName').value = "";
         var roleEl = document.getElementById('formRole');
         var adminEl = document.getElementById('formIsAdmin');
         if (roleEl) roleEl.value = 'user';
@@ -96,6 +98,7 @@
         document.getElementById('formCardId').value = u.card_id; document.getElementById('formCardId').readOnly = true;
         document.getElementById('formFirstName').value = u.first_name;
         document.getElementById('formLastName').value = u.last_name;
+        document.getElementById('formScreenName').value = u.screen_name || "";
         var roleEl = document.getElementById('formRole');
         var adminEl = document.getElementById('formIsAdmin');
         if (roleEl) {
