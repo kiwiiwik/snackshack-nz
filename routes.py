@@ -331,6 +331,20 @@ def pin_clear():
         if u: u.pin = None; db.session.commit(); flash("PIN removed.", "info")
     return redirect(url_for('main.index'))
 
+@main.route('/admin/pin_reset/<int:user_id>', methods=['POST'])
+def admin_pin_reset(user_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    current = Users.query.get(int(session['user_id']))
+    if not current or not (current.is_admin or current.is_super_admin):
+        return redirect(url_for('main.index'))
+    target = Users.query.get(user_id)
+    if target:
+        target.pin = None
+        db.session.commit()
+        flash(f"PIN cleared for {target.first_name} {target.last_name}.", "info")
+    return redirect(url_for('main.manage_users'))
+
 @main.route('/email_settings', methods=['POST'])
 def email_settings():
     if 'user_id' not in session:
