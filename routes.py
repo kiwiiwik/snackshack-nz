@@ -652,7 +652,8 @@ def generate_nightly_report_html(app):
     tx_rows = ""
     daily_total = 0.0
     for t, u, p in txs:
-        name = (u.screen_name or f"{u.first_name or ''} {u.last_name or ''}".strip()) if u else "Unknown"
+        real = f"{u.first_name or ''} {u.last_name or ''}".strip() if u else "Unknown"
+        name = f"{real} ({u.screen_name})" if u and u.screen_name else real
         desc = p.description if p else "Payment"
         amt = float(t.amount or 0)
         daily_total += amt
@@ -668,7 +669,8 @@ def generate_nightly_report_html(app):
     for u in users:
         bal = float(u.balance or 0)
         colour = "#dc3545" if bal < 0 else "#333"
-        display = u.screen_name or f"{u.first_name or ''} {u.last_name or ''}".strip()
+        real = f"{u.first_name or ''} {u.last_name or ''}".strip()
+        display = f"{real} ({u.screen_name})" if u.screen_name else real
         bal_rows += f"<tr><td>{display}</td><td style='text-align:right;color:{colour};font-weight:bold'>${bal:.2f}</td></tr>\n"
 
     # --- Section 3: Stock Report (low stock first) ---
