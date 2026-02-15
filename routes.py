@@ -431,23 +431,34 @@ def upload_avatar():
     if not u:
         return redirect(url_for('main.index'))
     file = request.files.get('avatar_photo')
-    if file:
-        # Determine type from filename or fall back to MIME type (for clipboard pastes)
-        mime = None
-        if file.filename and '.' in file.filename:
-            ext = file.filename.rsplit('.', 1)[1].lower()
-            if ext in ALLOWED_EXTENSIONS:
-                mime = 'jpeg' if ext == 'jpg' else ext
-        if not mime and file.content_type:
-            ct = file.content_type.lower()
-            mime_map = {'image/png': 'png', 'image/jpeg': 'jpeg', 'image/webp': 'webp', 'image/gif': 'gif'}
-            mime = mime_map.get(ct)
-        if mime:
-            raw = file.read()
-            if len(raw) <= 2 * 1024 * 1024:
-                u.avatar_data = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
-                u.avatar = None  # clear preset when uploading custom
-                db.session.commit()
+    if not file or not file.filename:
+        flash("No file received.", "warning")
+        return redirect(url_for('main.index'))
+    # Determine type from filename or fall back to MIME type (for clipboard pastes)
+    mime = None
+    if file.filename and '.' in file.filename:
+        ext = file.filename.rsplit('.', 1)[1].lower()
+        if ext in ALLOWED_EXTENSIONS:
+            mime = 'jpeg' if ext == 'jpg' else ext
+    if not mime and file.content_type:
+        ct = file.content_type.lower()
+        mime_map = {'image/png': 'png', 'image/jpeg': 'jpeg', 'image/webp': 'webp', 'image/gif': 'gif'}
+        mime = mime_map.get(ct)
+    if not mime:
+        flash("Unsupported image format.", "warning")
+        return redirect(url_for('main.index'))
+    raw = file.read()
+    if len(raw) > 2 * 1024 * 1024:
+        flash("Image too large (max 2 MB).", "warning")
+        return redirect(url_for('main.index'))
+    try:
+        u.avatar_data = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
+        u.avatar = None  # clear preset when uploading custom
+        db.session.commit()
+        flash("Photo updated!", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Failed to save photo: {e}", "danger")
     return redirect(url_for('main.index'))
 
 @main.route('/user_avatar/<int:user_id>')
@@ -460,7 +471,7 @@ def user_avatar(user_id):
             mime, data = match.group(1), match.group(2)
             resp = make_response(base64.b64decode(data))
             resp.headers['Content-Type'] = f'image/{mime}'
-            resp.headers['Cache-Control'] = 'public, max-age=3600'
+            resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             return resp
     return redirect(url_for('static', filename='images/placeholder.png'))
 
