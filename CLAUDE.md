@@ -25,6 +25,7 @@ static/images/      - Product images (uploaded via admin)
 ```
 
 ## Key Features
+- **Screen names:** Optional display name shown on kiosk instead of real name; users set via profile, admins via team management
 - **User selection:** A-Z jump bar for 80+ staff, tap to log in
 - **PIN security:** Users can set/clear a 4-digit PIN on their account
 - **Barcode scanning:** Hidden form auto-captures scanner input
@@ -35,7 +36,7 @@ static/images/      - Product images (uploaded via admin)
 - **Auto-logout:** 15-second inactivity timer (pauses when modals are open)
 
 ## Database Tables
-- **Users** - User_ID, First_Name, Last_Name, Card_ID, Balance, last_seen, PIN, Email_Address, Notify_On_Purchase, Phone_Number, Is_Admin
+- **Users** - User_ID, First_Name, Last_Name, Screen_Name, Card_ID, Balance, last_seen, PIN, Email_Address, Notify_On_Purchase, Phone_Number, Is_Admin
 - **Products** - UPC_Code, Manufacturer, Description, Size, Price, Stock_Level, Is_Quick_Item, Image_URL, Last_Audited, Category
 - **Transactions** - Transaction_ID, User_ID, UPC_Code, Amount, Transaction_Date
 
@@ -58,6 +59,7 @@ static/images/      - Product images (uploaded via admin)
 | `SMS_DAILY_CAP` | Max SMS per day (default: 20) |
 
 ## Recent History
+- **v1.8.0** - Screen names: users can set an optional display name shown on the kiosk instead of their real name
 - **v1.7.0** - SMS verification for email changes via MessageMedia (replaces email+captcha), 20/day SMS cap, admin notified on each SMS
 - **v1.6.7** - Touch enablement across all pages, email verification codes
 - **v1.6.6** - Added email settings + purchase notifications via SMTP2Go
@@ -73,6 +75,9 @@ ALTER TABLE Users ADD Phone_Number VARCHAR(20);
 -- v1.7.1: Widen PIN column for hashed values, clear existing plaintext PINs
 ALTER TABLE Users ALTER COLUMN PIN VARCHAR(64);
 UPDATE Users SET PIN = NULL WHERE PIN IS NOT NULL;
+
+-- v1.8.0: Add screen name column
+ALTER TABLE Users ADD Screen_Name VARCHAR(50);
 ```
 
 ## Current Version

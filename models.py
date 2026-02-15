@@ -8,6 +8,7 @@ class Users(db.Model):
     user_id = db.Column('User_ID', db.Integer, primary_key=True)
     first_name = db.Column('First_Name', db.String(50))
     last_name = db.Column('Last_Name', db.String(50))
+    screen_name = db.Column('Screen_Name', db.String(50))
     card_id = db.Column('Card_ID', db.String(50), unique=True)
     balance = db.Column('Balance', db.Numeric(10, 2), default=0.00)
     last_seen = db.Column('last_seen', db.DateTime, default=datetime.utcnow)
@@ -25,6 +26,7 @@ class Users(db.Model):
             'user_id': self.user_id,
             'first_name': self.first_name or "",
             'last_name': self.last_name or "",
+            'screen_name': self.screen_name or "",
             'card_id': self.card_id or "",
             'balance': float(self.balance) if self.balance else 0.0,
             'is_admin': self.is_admin,

@@ -58,7 +58,7 @@
             <tbody>
               {% for row in rows %}
               <tr>
-                <td class="fw-semibold">{{ row.user.first_name }} {{ row.user.last_name }}</td>
+                <td class="fw-semibold">{{ row.user.screen_name or (row.user.first_name ~ ' ' ~ row.user.last_name) }}</td>
                 <td class="text-end mono">${{ "%.2f"|format(row.start_balance) }}</td>
                 <td class="text-end mono">${{ "%.2f"|format(row.spent) }}</td>
                 <td class="text-end mono">${{ "%.2f"|format(row.end_balance) }}</td>

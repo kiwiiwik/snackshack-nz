@@ -177,7 +177,8 @@ def process_barcode(barcode):
             db.session.add(Transactions(user_id=u.user_id, upc_code=product.upc_code, amount=price))
             db.session.commit()
             if u.email and u.notify_on_purchase:
-                send_purchase_email(current_app._get_current_object(), u.email, u.first_name, product.description, float(price), float(u.balance))
+                display_name = u.screen_name or u.first_name
+                send_purchase_email(current_app._get_current_object(), u.email, display_name, product.description, float(price), float(u.balance))
             return {"status": "purchased", "description": product.description}
     return {"status": "not_found"}
 
@@ -190,8 +191,10 @@ def index():
     if 'user_id' in session:
         current_user = Users.query.get(int(session['user_id']))
 
-    # Alphabetical sorting for 80+ names
-    all_users = Users.query.order_by(Users.first_name.asc()).all()
+    # Alphabetical sorting for 80+ names - prefer screen_name, fallback to first_name
+    all_users = Users.query.order_by(
+        db.func.coalesce(Users.screen_name, Users.first_name).asc()
+    ).all()
 
     cat_order = ["Drinks", "Snacks", "Candy", "Frozen", "Coffee Pods", "Sweepstake Tickets"]
     grouped = {cat: [] for cat in cat_order}
@@ -390,9 +393,21 @@ def email_settings():
     session['pending_email'] = new_email
     session['pending_phone'] = new_phone
     session['sms_code'] = code
-    send_sms_code(current_app._get_current_object(), new_phone, u.first_name, code)
+    send_sms_code(current_app._get_current_object(), new_phone, u.screen_name or u.first_name, code)
     flash("Verification code sent to your phone!", "info")
     return redirect(url_for('main.index', verify_email=1))
+
+@main.route('/set_screen_name', methods=['POST'])
+def set_screen_name():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    u = Users.query.get(int(session['user_id']))
+    if not u:
+        return redirect(url_for('main.index'))
+    u.screen_name = request.form.get('screen_name', '').strip() or None
+    db.session.commit()
+    flash("Screen name updated.", "success")
+    return redirect(url_for('main.index'))
 
 @main.route('/set_avatar', methods=['POST'])
 def set_avatar():
@@ -516,6 +531,7 @@ def save_user():
     user = Users.query.get(int(uid)) if uid else Users(card_id=request.form.get('card_id', '').strip())
     if not uid: db.session.add(user)
     user.first_name, user.last_name = request.form.get('first_name'), request.form.get('last_name')
+    user.screen_name = request.form.get('screen_name', '').strip() or None
     # Only super admins can change role assignments
     current = Users.query.get(int(session.get('user_id', 0)))
     if current and current.is_super_admin:
@@ -636,7 +652,7 @@ def generate_nightly_report_html(app):
     tx_rows = ""
     daily_total = 0.0
     for t, u, p in txs:
-        name = f"{u.first_name or ''} {u.last_name or ''}".strip() if u else "Unknown"
+        name = (u.screen_name or f"{u.first_name or ''} {u.last_name or ''}".strip()) if u else "Unknown"
         desc = p.description if p else "Payment"
         amt = float(t.amount or 0)
         daily_total += amt
@@ -652,7 +668,8 @@ def generate_nightly_report_html(app):
     for u in users:
         bal = float(u.balance or 0)
         colour = "#dc3545" if bal < 0 else "#333"
-        bal_rows += f"<tr><td>{u.first_name or ''} {u.last_name or ''}</td><td style='text-align:right;color:{colour};font-weight:bold'>${bal:.2f}</td></tr>\n"
+        display = u.screen_name or f"{u.first_name or ''} {u.last_name or ''}".strip()
+        bal_rows += f"<tr><td>{display}</td><td style='text-align:right;color:{colour};font-weight:bold'>${bal:.2f}</td></tr>\n"
 
     # --- Section 3: Stock Report (low stock first) ---
     products = Products.query.order_by(Products.stock_level.asc(), Products.description).all()

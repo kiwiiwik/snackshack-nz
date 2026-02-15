@@ -29,7 +29,7 @@
                     <i class="fas fa-smile" style="font-size:1.4rem;"></i>
                 {% endif %}
             </button>
-            <strong class="text-primary">{{ user.first_name }}</strong>
+            <strong class="text-primary">{{ user.screen_name or user.first_name }}</strong>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2">${{ "%.2f"|format(user.balance) }}</span>
             {% if user.pin %}
                 <form action="{{ url_for('main.pin_clear') }}" method="POST" class="d-inline"><button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fas fa-lock"></i></button></form>
@@ -58,7 +58,7 @@
                     <i class="fas fa-smile me-1"></i> Avatar
                 {% endif %}
             </button>
-            <span class="me-1">Active: <strong class="text-primary">{{ user.first_name }} {{ user.last_name }}</strong></span>
+            <span class="me-1">Active: <strong class="text-primary">{{ user.screen_name or (user.first_name ~ ' ' ~ user.last_name) }}</strong></span>
             <span class="badge {{ 'bg-danger' if user.balance < 0 else 'bg-success' }} p-2 fs-6">${{ "%.2f"|format(user.balance) }}</span>
             <a href="{{ url_for('main.logout') }}" class="btn btn-danger">Logout</a>
             {% endif %}
@@ -122,22 +122,23 @@
             {% endif %}
             {% set ns = namespace(last_char='') %}
             {% for u in users %}
-                {% set current_char = u.first_name[0]|upper %}
+                {% set display_name = u.screen_name or (u.first_name ~ ' ' ~ u.last_name) %}
+                {% set current_char = display_name[0]|upper %}
                 {% if is_mobile %}
-                <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="mobile-user-row user-col" data-name="{{ u.first_name }} {{ u.last_name }}">
+                <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="mobile-user-row user-col" data-name="{{ display_name }} {{ u.first_name }} {{ u.last_name }}">
                     {% if u.avatar_data %}
                         <img src="{{ url_for('main.user_avatar', user_id=u.user_id) }}" alt="" class="mobile-avatar">
                     {% elif u.avatar %}
                         <img src="https://api.dicebear.com/9.x/fun-emoji/svg?seed={{ u.avatar }}" alt="" class="mobile-avatar">
                     {% else %}
-                        <div class="mobile-avatar-letter">{{ u.first_name[0] }}</div>
+                        <div class="mobile-avatar-letter">{{ display_name[0] }}</div>
                     {% endif %}
-                    <span class="mobile-user-name">{{ u.first_name }} {{ u.last_name }}</span>
+                    <span class="mobile-user-name">{{ display_name }}</span>
                     {% if u.pin %}<i class="fas fa-lock" style="color:var(--color-text-tertiary);font-size:0.8rem;"></i>{% endif %}
                     <i class="fas fa-chevron-right" style="color:var(--color-text-tertiary);font-size:0.75rem;margin-left:auto;"></i>
                 </a>
                 {% else %}
-                <div class="col position-relative user-col" data-name="{{ u.first_name }} {{ u.last_name }}">
+                <div class="col position-relative user-col" data-name="{{ display_name }} {{ u.first_name }} {{ u.last_name }}">
                     {% if current_char != ns.last_char %}
                         <span id="letter-{{ current_char }}" class="anchor-point"></span>
                         {% set ns.last_char = current_char %}
@@ -152,9 +153,9 @@
                             {% elif u.avatar %}
                                 <img src="https://api.dicebear.com/9.x/fun-emoji/svg?seed={{ u.avatar }}" alt="" class="initial-avatar" style="background:transparent;border-radius:50%;width:72px;height:72px;">
                             {% else %}
-                                <div class="initial-avatar">{{ u.first_name[0] }}</div>
+                                <div class="initial-avatar">{{ display_name[0] }}</div>
                             {% endif %}
-                            <div class="user-name">{{ u.first_name }} {{ u.last_name }}</div>
+                            <div class="user-name">{{ display_name }}</div>
                         </div>
                     </a>
                 </div>
@@ -203,9 +204,9 @@
         {% elif pin_user.avatar %}
             <img src="https://api.dicebear.com/9.x/fun-emoji/svg?seed={{ pin_user.avatar }}" alt="" class="initial-avatar mx-auto" style="background:transparent;border-radius:50%;width:72px;height:72px;">
         {% else %}
-            <div class="initial-avatar mx-auto">{{ pin_user.first_name[0] }}</div>
+            <div class="initial-avatar mx-auto">{{ (pin_user.screen_name or pin_user.first_name)[0] }}</div>
         {% endif %}
-        <h3 class="fw-bold mb-1">{{ pin_user.first_name }} {{ pin_user.last_name }}</h3>
+        <h3 class="fw-bold mb-1">{{ pin_user.screen_name or (pin_user.first_name ~ ' ' ~ pin_user.last_name) }}</h3>
         <p class="text-muted mb-4">Enter your 4-digit PIN</p>
         <form action="{{ url_for('main.pin_verify') }}" method="POST">
             <input type="hidden" name="user_id" value="{{ pin_user.user_id }}">
@@ -370,8 +371,19 @@
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content shadow-lg border-0" style="border-radius: 25px;">
             <div class="modal-body p-4 p-md-5 text-center">
-                <h3 class="fw-bold mb-1">Choose Your Avatar</h3>
-                <p class="text-muted mb-4">Tap to select</p>
+                <h3 class="fw-bold mb-1">Personalise Your Profile</h3>
+                <p class="text-muted mb-4">Set a screen name and avatar</p>
+                {# Screen name #}
+                <div class="mb-4 p-3" style="background:var(--color-bg);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                    <form action="{{ url_for('main.set_screen_name') }}" method="POST" class="d-flex align-items-end gap-2">
+                        <div class="flex-grow-1 text-start">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Screen Name</label>
+                            <input type="text" name="screen_name" class="form-control" placeholder="{{ user.first_name }} {{ user.last_name }}" value="{{ user.screen_name or '' }}" maxlength="50">
+                        </div>
+                        <button type="submit" class="btn btn-primary fw-bold" style="min-height:38px;">Save</button>
+                    </form>
+                    <div class="text-muted small mt-1">Shown on the kiosk instead of your real name. Leave blank to use your real name.</div>
+                </div>
                 {# Custom photo upload #}
                 <div class="mb-4 p-3" style="background:var(--color-bg);border-radius:var(--radius-md);border:2px dashed var(--color-border);">
                     <form action="{{ url_for('main.upload_avatar') }}" method="POST" enctype="multipart/form-data" id="avatarUploadForm">
