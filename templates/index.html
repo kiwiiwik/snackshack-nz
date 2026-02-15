@@ -393,8 +393,8 @@
                             <input type="file" name="avatar_photo" accept="image/png,image/jpeg,image/webp" style="display:none;" onchange="this.form.submit();">
                         </label>
                     </form>
-                    <div id="avatarPasteZone" tabindex="0" style="margin-top:10px;padding:18px 12px;border:2px dashed var(--color-primary);border-radius:var(--radius-md);cursor:pointer;color:var(--color-text-secondary);font-size:0.95rem;outline:none;transition:var(--transition-base);">
-                        <i class="fas fa-paste me-1"></i> Click here then <strong>Ctrl+V</strong> to paste an image
+                    <div id="avatarPasteZone" style="margin-top:10px;padding:18px 12px;border:2px dashed var(--color-primary);border-radius:var(--radius-md);color:var(--color-text-secondary);font-size:0.95rem;transition:var(--transition-base);">
+                        <i class="fas fa-paste me-1"></i> <strong>Ctrl+V</strong> to paste an image
                     </div>
                     {% if user.avatar_data %}
                     <div class="mt-2">
@@ -741,7 +741,9 @@
         zone.style.background = '';
     });
 
-    zone.addEventListener('paste', function(e) {
+    // Listen for paste on the entire modal so it works regardless of focus
+    var modal = document.getElementById('avatarPickerModal');
+    if (modal) modal.addEventListener('paste', function(e) {
         var items = (e.clipboardData || e.originalEvent.clipboardData).items;
         for (var i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image/') === 0) {
@@ -771,7 +773,7 @@
         }
         zone.innerHTML = '<i class="fas fa-exclamation-triangle me-1 text-warning"></i> No image found in clipboard';
         setTimeout(function() {
-            zone.innerHTML = '<i class="fas fa-paste me-1"></i> Click here then <strong>Ctrl+V</strong> to paste an image';
+            zone.innerHTML = '<i class="fas fa-paste me-1"></i> <strong>Ctrl+V</strong> to paste an image';
         }, 2000);
     });
 })();
