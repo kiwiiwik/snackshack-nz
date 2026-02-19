@@ -107,17 +107,17 @@
         {% endif %}
         <div class="{% if is_mobile %}mobile-user-list{% else %}row row-cols-2 row-cols-md-4 row-cols-lg-5 g-4{% endif %} mb-5">
             {% if is_mobile %}
-            <a href="#" class="mobile-user-row" data-bs-toggle="modal" data-bs-target="#registerModal" style="background:var(--color-primary-light);border-bottom:2px solid var(--color-primary);">
+            <a href="{{ url_for('main.terms') }}" class="mobile-user-row" style="background:var(--color-primary-light);border-bottom:2px solid var(--color-primary);">
                 <div class="mobile-avatar-letter" style="background:var(--color-primary);color:white;font-size:1.4rem;">+</div>
                 <span class="mobile-user-name" style="color:var(--color-primary);font-weight:600;">I'm New Here</span>
                 <i class="fas fa-chevron-right" style="color:var(--color-primary);font-size:0.75rem;margin-left:auto;"></i>
             </a>
             {% else %}
             <div class="col position-relative">
-                <div class="card h-100 p-4 user-tile text-center" style="border:2px dashed var(--color-primary);background:var(--color-primary-light);cursor:pointer;" data-bs-toggle="modal" data-bs-target="#registerModal">
+                <a href="{{ url_for('main.terms') }}" class="card h-100 p-4 user-tile text-center text-decoration-none" style="border:2px dashed var(--color-primary);background:var(--color-primary-light);cursor:pointer;">
                     <div class="initial-avatar" style="background:#E8F0FE;color:var(--color-primary);font-size:2rem;">+</div>
                     <div class="user-name" style="color:var(--color-primary);">I'm New Here</div>
-                </div>
+                </a>
             </div>
             {% endif %}
             {% set ns = namespace(last_char='') %}
@@ -798,6 +798,10 @@
     {% endif %}
     {% if verify_email and user %}
     window.addEventListener('load', function() { new bootstrap.Modal(document.getElementById('emailSettingsModal')).show(); });
+    {% endif %}
+
+    {% if show_register %}
+    window.addEventListener('load', function() { new bootstrap.Modal(document.getElementById('registerModal')).show(); });
     {% endif %}
 
     {% if user and not is_mobile %}

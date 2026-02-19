@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms - Social Club '26 Snackshack</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{{ 'mobile-site' if is_mobile else '' }}">
+
+<nav class="navbar navbar-light bg-white px-3">
+    <a class="navbar-brand" href="/">Social Club '26 Snackshack</a>
+</nav>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">Terms and Conditions</h2>
+                    <p class="card-text mt-3">The Snackshack app and hardware are provided by Rod personally and for free. He may remove them at any time, though they are intended to stay for 2026. This setup is entirely independent of Rod’s contractor role; therefore, all support must go through him directly (rod.grant@i6.co.nz / 021 747 268). Do not contact PJ or NTT with issues: It has nothing to do with them. Please confirm you understand and agree.</p>
+                    <div class="d-flex gap-2 justify-content-end mt-4">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <a href="{{ url_for('main.index', show_register=1) }}" class="btn btn-primary">I Agree</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

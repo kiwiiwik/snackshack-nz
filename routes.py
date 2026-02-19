@@ -214,7 +214,18 @@ def index():
         verify_email=request.args.get('verify_email'),
         pending_email=session.get('pending_email'),
         avatar_options=AVATAR_OPTIONS,
-        is_mobile=mobile)
+        is_mobile=mobile,
+        show_register=request.args.get('show_register'))
+
+
+@main.route('/terms')
+def terms():
+    """Show terms and conditions page before enrolment."""
+    mobile = is_mobile_site()
+    current_user = None
+    if 'user_id' in session:
+        current_user = Users.query.get(int(session['user_id']))
+    return render_template('terms.html', user=current_user, is_mobile=mobile)
 
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
