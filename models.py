@@ -61,6 +61,12 @@ class Products(db.Model):
             'image_url': self.image_url or ""
         }
 
+class Wallpapers(db.Model):
+    __tablename__ = 'Wallpapers'
+    slot = db.Column('Slot', db.Integer, primary_key=True)  # 1–5
+    image_landscape = db.Column('Image_Landscape', db.Text, nullable=True)
+    image_portrait  = db.Column('Image_Portrait',  db.Text, nullable=True)
+
 class Transactions(db.Model):
     __tablename__ = 'Transactions'
     transaction_id = db.Column('Transaction_ID', db.Integer, primary_key=True)

@@ -10,7 +10,7 @@ from email.mime.multipart import MIMEMultipart
 import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, current_app, make_response
 from werkzeug.utils import secure_filename
-from models import db, Users, Products, Transactions
+from models import db, Users, Products, Transactions, Wallpapers
 from datetime import datetime, timedelta
 from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
@@ -204,6 +204,12 @@ def index():
             grouped[cat] = []
         grouped[cat].append(p)
 
+    _wallpapers = Wallpapers.query.order_by(Wallpapers.slot).all()
+    wallpaper_slots = [
+        {'slot': w.slot, 'land': bool(w.image_landscape), 'port': bool(w.image_portrait)}
+        for w in _wallpapers if w.image_landscape or w.image_portrait
+    ]
+
     return render_template('index.html',
         user=current_user,
         users=all_users,
@@ -215,7 +221,8 @@ def index():
         pending_email=session.get('pending_email'),
         avatar_options=AVATAR_OPTIONS,
         is_mobile=mobile,
-        show_register=request.args.get('show_register'))
+        show_register=request.args.get('show_register'),
+        wallpaper_slots=wallpaper_slots)
 
 
 @main.route('/terms')
@@ -320,6 +327,93 @@ def product_image(upc):
             resp.headers['Cache-Control'] = 'public, max-age=86400'
             return resp
     return redirect(url_for('static', filename='images/placeholder.png'))
+
+@main.route('/wallpaper/<int:slot>/<orientation>')
+def wallpaper_image(slot, orientation):
+    """Serve wallpaper image (landscape or portrait) from DB."""
+    w = Wallpapers.query.get(slot)
+    if w:
+        data = w.image_landscape if orientation == 'landscape' else w.image_portrait
+        if data:
+            match = re.match(r'^data:image/([\w+]+);base64,(.+)$', data, re.DOTALL)
+            if match:
+                mime, encoded = match.group(1), match.group(2)
+                resp = make_response(base64.b64decode(encoded))
+                resp.headers['Content-Type'] = f'image/{mime}'
+                resp.headers['Cache-Control'] = 'public, max-age=86400'
+                return resp
+    return redirect(url_for('static', filename='images/placeholder.png'))
+
+@main.route('/admin/wallpapers')
+def manage_wallpapers():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    current = Users.query.get(int(session['user_id']))
+    if not current or not (current.is_admin or current.is_super_admin):
+        return redirect(url_for('main.index'))
+    wallpapers = {w.slot: w for w in Wallpapers.query.all()}
+    return render_template('manage_wallpapers.html', wallpapers=wallpapers, slots=range(1, 6))
+
+@main.route('/admin/wallpaper/save', methods=['POST'])
+def save_wallpaper():
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    current = Users.query.get(int(session['user_id']))
+    if not current or not (current.is_admin or current.is_super_admin):
+        return redirect(url_for('main.index'))
+    slot = int(request.form.get('slot', 0))
+    orientation = request.form.get('orientation', '')
+    if slot < 1 or slot > 5 or orientation not in ('landscape', 'portrait'):
+        flash("Invalid slot or orientation.", "danger")
+        return redirect(url_for('main.manage_wallpapers'))
+    w = Wallpapers.query.get(slot)
+    if not w:
+        w = Wallpapers(slot=slot)
+        db.session.add(w)
+    file = request.files.get('wallpaper_image')
+    if file:
+        mime = None
+        if file.filename and '.' in file.filename:
+            ext = file.filename.rsplit('.', 1)[1].lower()
+            if ext in ALLOWED_EXTENSIONS:
+                mime = 'jpeg' if ext == 'jpg' else ext
+        if not mime and file.content_type:
+            mime_map = {'image/png': 'png', 'image/jpeg': 'jpeg', 'image/webp': 'webp', 'image/gif': 'gif'}
+            mime = mime_map.get(file.content_type.lower())
+        if mime:
+            raw = file.read()
+            if len(raw) <= 5 * 1024 * 1024:
+                encoded = f"data:image/{mime};base64,{base64.b64encode(raw).decode()}"
+                if orientation == 'landscape':
+                    w.image_landscape = encoded
+                else:
+                    w.image_portrait = encoded
+                db.session.commit()
+                flash(f"Wallpaper {slot} ({orientation}) saved.", "success")
+            else:
+                flash("Image too large (max 5 MB).", "danger")
+        else:
+            flash("Unsupported image format.", "danger")
+    return redirect(url_for('main.manage_wallpapers'))
+
+@main.route('/admin/wallpaper/delete/<int:slot>/<orientation>', methods=['POST'])
+def delete_wallpaper(slot, orientation):
+    if 'user_id' not in session:
+        return redirect(url_for('main.index'))
+    current = Users.query.get(int(session['user_id']))
+    if not current or not (current.is_admin or current.is_super_admin):
+        return redirect(url_for('main.index'))
+    w = Wallpapers.query.get(slot)
+    if w:
+        if orientation == 'landscape':
+            w.image_landscape = None
+        else:
+            w.image_portrait = None
+        if not w.image_landscape and not w.image_portrait:
+            db.session.delete(w)
+        db.session.commit()
+        flash(f"Wallpaper {slot} ({orientation}) removed.", "info")
+    return redirect(url_for('main.manage_wallpapers'))
 
 @main.route('/pin_verify', methods=['POST'])
 def pin_verify():

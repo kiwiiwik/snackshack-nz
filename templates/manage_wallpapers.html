@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallpaper Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+        .slot-card { border-radius: 16px; border: none; }
+        .thumb-land { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 10px; background: #dee2e6; }
+        .thumb-port { width: 56%; aspect-ratio: 9/16; object-fit: cover; border-radius: 10px; background: #dee2e6; }
+        .thumb-empty { display: flex; align-items: center; justify-content: center; color: #adb5bd; font-size: 2rem; }
+        .upload-label { cursor: pointer; display: block; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold fs-4" href="/"><i class="fas fa-arrow-left me-2"></i> Back to Kiosk</a>
+        <span class="text-white-50 small">Promo Wallpapers &mdash; up to 5 slots, landscape + portrait per slot</span>
+    </div>
+</nav>
+
+<div class="container pb-5">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <div class="row g-4">
+        {% for slot in slots %}
+        {% set w = wallpapers.get(slot) %}
+        <div class="col-12">
+            <div class="card slot-card shadow-sm">
+                <div class="card-header bg-white fw-bold fs-5 py-3">
+                    <i class="fas fa-image me-2 text-muted"></i>Wallpaper Slot {{ slot }}
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+
+                        <!-- LANDSCAPE -->
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-uppercase text-muted mb-3"><i class="fas fa-expand-alt me-1"></i> Landscape (16:9)</h6>
+                            {% if w and w.image_landscape %}
+                            <img src="{{ url_for('main.wallpaper_image', slot=slot, orientation='landscape') }}"
+                                 alt="Slot {{ slot }} landscape" class="thumb-land d-block mb-3">
+                            {% else %}
+                            <div class="thumb-land thumb-empty mb-3"><i class="fas fa-image"></i></div>
+                            {% endif %}
+
+                            <form action="{{ url_for('main.save_wallpaper') }}" method="POST" enctype="multipart/form-data" class="mb-2">
+                                <input type="hidden" name="slot" value="{{ slot }}">
+                                <input type="hidden" name="orientation" value="landscape">
+                                <div class="input-group">
+                                    <input type="file" name="wallpaper_image" class="form-control" accept="image/*" required>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-upload me-1"></i>Upload</button>
+                                </div>
+                                <div class="form-text">JPG/PNG/WebP, max 5 MB. Recommended: 1920×1080 px.</div>
+                            </form>
+
+                            {% if w and w.image_landscape %}
+                            <form action="{{ url_for('main.delete_wallpaper', slot=slot, orientation='landscape') }}" method="POST">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Remove landscape wallpaper {{ slot }}?')">
+                                    <i class="fas fa-trash me-1"></i>Remove
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                        <!-- PORTRAIT -->
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-uppercase text-muted mb-3"><i class="fas fa-compress-alt me-1"></i> Portrait (9:16)</h6>
+                            <div class="d-flex align-items-start gap-3 mb-3">
+                                {% if w and w.image_portrait %}
+                                <img src="{{ url_for('main.wallpaper_image', slot=slot, orientation='portrait') }}"
+                                     alt="Slot {{ slot }} portrait" class="thumb-port">
+                                {% else %}
+                                <div class="thumb-port thumb-empty"><i class="fas fa-image"></i></div>
+                                {% endif %}
+                            </div>
+
+                            <form action="{{ url_for('main.save_wallpaper') }}" method="POST" enctype="multipart/form-data" class="mb-2">
+                                <input type="hidden" name="slot" value="{{ slot }}">
+                                <input type="hidden" name="orientation" value="portrait">
+                                <div class="input-group">
+                                    <input type="file" name="wallpaper_image" class="form-control" accept="image/*" required>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-upload me-1"></i>Upload</button>
+                                </div>
+                                <div class="form-text">JPG/PNG/WebP, max 5 MB. Recommended: 1080×1920 px.</div>
+                            </form>
+
+                            {% if w and w.image_portrait %}
+                            <form action="{{ url_for('main.delete_wallpaper', slot=slot, orientation='portrait') }}" method="POST">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Remove portrait wallpaper {{ slot }}?')">
+                                    <i class="fas fa-trash me-1"></i>Remove
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

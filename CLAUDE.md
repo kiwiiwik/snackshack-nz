@@ -78,6 +78,13 @@ UPDATE Users SET PIN = NULL WHERE PIN IS NOT NULL;
 
 -- v1.8.0: Add screen name column
 ALTER TABLE Users ADD Screen_Name VARCHAR(50);
+
+-- v1.9.0: Promo wallpaper screensaver table
+CREATE TABLE Wallpapers (
+    Slot            INT          NOT NULL PRIMARY KEY,
+    Image_Landscape TEXT         NULL,
+    Image_Portrait  TEXT         NULL
+);
 ```
 
 ## Current Version
