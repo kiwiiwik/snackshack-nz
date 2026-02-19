@@ -801,7 +801,7 @@
     {% endif %}
 
     {% if show_register %}
-    window.addEventListener('load', function() { new bootstrap.Modal(document.getElementById('registerModal')).show(); });
+    (function() { var el = document.getElementById('registerModal'); if (el) bootstrap.Modal.getOrCreateInstance(el).show(); })();
     {% endif %}
 
     {% if user and not is_mobile %}
