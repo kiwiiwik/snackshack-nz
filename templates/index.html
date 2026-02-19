@@ -66,19 +66,7 @@
         {% endif %}
     </nav>
     
-    {% if not user %}
-        {% if not is_mobile %}
-        <div class="search-bar-wrap position-relative">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="userSearch" class="search-input" placeholder="Search by name..." autocomplete="off" autocorrect="off" spellcheck="false">
-        </div>
-        <div class="alphabet-nav">
-            {% for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ"|list %}
-                <a href="#letter-{{ char }}" class="letter-link">{{ char }}</a>
-            {% endfor %}
-        </div>
-        {% endif %}
-    {% else %}
+    {% if user %}
         <div class="category-nav">
             {% for category in grouped_products.keys() %}
                 <a href="#cat-{{ loop.index }}" class="nav-chip">{{ category }}</a>
@@ -120,10 +108,8 @@
                 </a>
             </div>
             {% endif %}
-            {% set ns = namespace(last_char='') %}
             {% for u in users %}
                 {% set display_name = u.screen_name or (u.first_name ~ ' ' ~ u.last_name) %}
-                {% set current_char = display_name[0]|upper %}
                 {% if is_mobile %}
                 <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="mobile-user-row user-col" data-name="{{ display_name }} {{ u.first_name }} {{ u.last_name }}">
                     {% if u.avatar_data %}
@@ -139,11 +125,6 @@
                 </a>
                 {% else %}
                 <div class="col position-relative user-col" data-name="{{ display_name }} {{ u.first_name }} {{ u.last_name }}">
-                    {% if current_char != ns.last_char %}
-                        <span id="letter-{{ current_char }}" class="anchor-point"></span>
-                        {% set ns.last_char = current_char %}
-                    {% endif %}
-
                     <a href="{{ url_for('main.select_user', user_id=u.user_id) }}" class="text-decoration-none text-dark d-block h-100">
                         <div class="card h-100 p-4 user-tile text-center">
                             {% if u.is_super_admin %}<i class="fas fa-crown badge-admin" style="color:#F59E0B;" title="Super Admin"></i>{% elif u.is_admin %}<i class="fas fa-user-shield badge-admin"></i>{% endif %}
@@ -698,31 +679,6 @@
 </script>
 {% endif %}
 
-{% if not user %}
-<script>
-    (function() {
-        const searchInput = document.getElementById('userSearch');
-        if (!searchInput) return;
-        const userCols = document.querySelectorAll('.user-col');
-
-        searchInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase().trim();
-            userCols.forEach(function(col) {
-                const name = col.getAttribute('data-name').toLowerCase();
-                col.style.display = (!query || name.includes(query)) ? '' : 'none';
-            });
-        });
-
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                this.value = '';
-                this.dispatchEvent(new Event('input'));
-                this.blur();
-            }
-        });
-    })();
-</script>
-{% endif %}
 
 {% if user %}
 <script>

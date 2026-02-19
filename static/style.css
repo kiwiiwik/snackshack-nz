@@ -44,7 +44,7 @@
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 
     /* Layout */
-    --header-height-logged-out: 195px;
+    --header-height-logged-out: 72px;
     --header-height-logged-in: 120px;
 }
 
@@ -105,84 +105,6 @@ body.logged-in {
 }
 
 /* ---- Search Bar ---- */
-
-.search-bar-wrap {
-    padding: 8px 16px;
-    background: var(--color-surface);
-}
-
-.search-input {
-    width: 100%;
-    padding: 10px 16px 10px 40px;
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-pill);
-    font-family: var(--font-family);
-    font-size: 0.95rem;
-    color: var(--color-text-primary);
-    background: var(--color-bg);
-    outline: none;
-    transition: var(--transition-base);
-}
-
-.search-input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(108, 155, 207, 0.15);
-    background: var(--color-surface);
-}
-
-.search-input::placeholder {
-    color: var(--color-text-tertiary);
-}
-
-.search-icon {
-    position: absolute;
-    left: 30px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--color-text-tertiary);
-    font-size: 0.9rem;
-    pointer-events: none;
-}
-
-/* ---- Alphabet Navigation ---- */
-
-.alphabet-nav {
-    display: flex;
-    overflow-x: auto;
-    padding: 6px 16px 10px;
-    gap: 4px;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-    scrollbar-width: none;
-}
-.alphabet-nav::-webkit-scrollbar { display: none; }
-
-.letter-link {
-    min-width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-sm);
-    text-decoration: none;
-    color: var(--color-text-secondary);
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: var(--transition-fast);
-}
-
-.letter-link:hover {
-    background: var(--color-primary-light);
-    color: var(--color-primary);
-}
-
-.letter-link:active {
-    background: var(--color-primary);
-    color: white;
-    transform: scale(0.92);
-}
 
 /* ---- Category Navigation (logged in) ---- */
 
@@ -363,13 +285,6 @@ body.logged-in:not(.mobile-site) .container {
 }
 
 /* ---- Anchor Points ---- */
-
-.anchor-point {
-    display: block;
-    position: relative;
-    top: calc(-1 * var(--header-height-logged-out) - 10px);
-    visibility: hidden;
-}
 
 /* ---- Section Titles ---- */
 
@@ -580,7 +495,7 @@ body.logged-in:not(.mobile-site) .container {
    ============================================================ */
 
 body.mobile-site {
-    --header-height-logged-out: 110px;
+    --header-height-logged-out: 60px;
     --header-height-logged-in: 70px;
 }
 
