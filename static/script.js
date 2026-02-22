@@ -139,6 +139,7 @@ barcodeInput.addEventListener('keypress', function (e) {
             body: JSON.stringify({user_id: currentUser.user_id, barcode: code})
         }).then(r => r.json()).then(data => {
             if(data.status === 'success') {
+                (function() { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.type = 'sine'; o.frequency.setValueAtTime(880, a.currentTime); g.gain.setValueAtTime(0.3, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.4); o.start(a.currentTime); o.stop(a.currentTime + 0.4); })();
                 statusDiv.innerHTML = "✅ " + data.product + " ($" + data.price + ") <button onclick='undoLast()' class='btn-undo'>↩ Undo</button>";
                 statusDiv.style.backgroundColor = "#d4edda"; updateBalance(data.new_balance);
                 const tile = document.getElementById('stock-' + code);
