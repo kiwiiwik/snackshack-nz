@@ -63,7 +63,7 @@ class Products(db.Model):
 
 class Wallpapers(db.Model):
     __tablename__ = 'Wallpapers'
-    slot = db.Column('Slot', db.Integer, primary_key=True)  # 1–5
+    slot = db.Column('Slot', db.Integer, primary_key=True, autoincrement=False)  # 1–5
     image_landscape = db.Column('Image_Landscape', db.Text, nullable=True)
     image_portrait  = db.Column('Image_Portrait',  db.Text, nullable=True)
 
