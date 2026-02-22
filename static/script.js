@@ -130,11 +130,11 @@ function updateBalance(amt) {
 
 // SCAN
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playPurchaseChime() { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sine'; o.frequency.setValueAtTime(880, audioCtx.currentTime); g.gain.setValueAtTime(0.3, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4); o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.4); }
+['click','keydown','touchstart'].forEach(t => document.addEventListener(t, () => audioCtx.resume(), {passive: true}));
+function playPurchaseChime() { audioCtx.resume().then(() => { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sine'; o.frequency.setValueAtTime(880, audioCtx.currentTime); g.gain.setValueAtTime(0.3, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4); o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.4); }); }
 function triggerScan(code) { barcodeInput.value = code; barcodeInput.dispatchEvent(new KeyboardEvent('keypress', { 'key': 'Enter' })); }
 barcodeInput.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
-        audioCtx.resume();
         const code = barcodeInput.value; barcodeInput.value = ''; statusDiv.innerText = "Processing...";
         fetch('/scan', {
             method: 'POST',
