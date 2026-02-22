@@ -129,9 +129,12 @@ function updateBalance(amt) {
 }
 
 // SCAN
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playPurchaseChime() { const o = audioCtx.createOscillator(); const g = audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); o.type = 'sine'; o.frequency.setValueAtTime(880, audioCtx.currentTime); g.gain.setValueAtTime(0.3, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4); o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.4); }
 function triggerScan(code) { barcodeInput.value = code; barcodeInput.dispatchEvent(new KeyboardEvent('keypress', { 'key': 'Enter' })); }
 barcodeInput.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') {
+        audioCtx.resume();
         const code = barcodeInput.value; barcodeInput.value = ''; statusDiv.innerText = "Processing...";
         fetch('/scan', {
             method: 'POST',
@@ -139,7 +142,7 @@ barcodeInput.addEventListener('keypress', function (e) {
             body: JSON.stringify({user_id: currentUser.user_id, barcode: code})
         }).then(r => r.json()).then(data => {
             if(data.status === 'success') {
-                (function() { const a = new (window.AudioContext || window.webkitAudioContext)(); const o = a.createOscillator(); const g = a.createGain(); o.connect(g); g.connect(a.destination); o.type = 'sine'; o.frequency.setValueAtTime(880, a.currentTime); g.gain.setValueAtTime(0.3, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.4); o.start(a.currentTime); o.stop(a.currentTime + 0.4); })();
+                playPurchaseChime();
                 statusDiv.innerHTML = "✅ " + data.product + " ($" + data.price + ") <button onclick='undoLast()' class='btn-undo'>↩ Undo</button>";
                 statusDiv.style.backgroundColor = "#d4edda"; updateBalance(data.new_balance);
                 const tile = document.getElementById('stock-' + code);
