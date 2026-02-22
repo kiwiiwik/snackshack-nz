@@ -164,7 +164,10 @@
                                     <span class="badge bg-light text-dark border p-2 fs-6">{{ p.stock_level }} left</span>
                                 </div>
                             </div>
-                            <a href="{{ url_for('main.manual_add', barcode=p.upc_code or 'MISSING') }}" class="text-decoration-none">
+                            <a href="{{ url_for('main.manual_add', barcode=p.upc_code or 'MISSING') }}"
+                               class="text-decoration-none confirm-purchase"
+                               data-name="{{ p.description }}"
+                               data-price="${{ '%.2f'|format(p.price) }}">
                                 <button class="purchase-btn">Purchase</button>
                             </a>
                         </div>
@@ -903,6 +906,23 @@
 })();
 </script>
 {% endif %}
+<div class="modal fade" id="confirmPurchaseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius:25px;">
+            <div class="modal-body p-5 text-center">
+                <div style="font-size:2.8rem;margin-bottom:12px;">🛒</div>
+                <h4 class="fw-bold mb-1" id="confirmProductName"></h4>
+                <div class="text-success fw-bold fs-3 mb-4" id="confirmProductPrice"></div>
+                <p class="text-muted mb-4">Confirm this purchase?</p>
+                <div class="d-flex gap-3 justify-content-center">
+                    <button type="button" class="btn btn-outline-secondary btn-lg px-4" data-bs-dismiss="modal">Cancel</button>
+                    <a id="confirmPurchaseBtn" href="#" class="btn btn-primary btn-lg px-4 fw-bold">Yes, buy it</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="purchaseToast">
     <div id="purchaseToastInner">
         <div id="purchaseToastCheck">✓</div>
@@ -910,6 +930,18 @@
         <div id="purchaseToastPrice"></div>
     </div>
 </div>
+<script>
+document.querySelectorAll('.confirm-purchase').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('confirmProductName').textContent = link.dataset.name;
+        document.getElementById('confirmProductPrice').textContent = link.dataset.price;
+        document.getElementById('confirmPurchaseBtn').href = link.href;
+        new bootstrap.Modal(document.getElementById('confirmPurchaseModal')).show();
+    });
+});
+</script>
+
 {% if just_bought %}
 <script>
 (function() {
