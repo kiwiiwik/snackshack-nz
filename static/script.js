@@ -128,6 +128,15 @@ function updateBalance(amt) {
     el.style.color = amt < 0 ? "#dc3545" : "#28a745";
 }
 
+// PURCHASE TOAST
+function showPurchaseToast(product, price) {
+    const toast = document.getElementById('purchaseToast');
+    document.getElementById('purchaseToastProduct').textContent = product;
+    document.getElementById('purchaseToastPrice').textContent = '$' + price;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1200);
+}
+
 // SCAN
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 ['click','keydown','touchstart'].forEach(t => document.addEventListener(t, () => audioCtx.resume(), {passive: true}));
@@ -143,6 +152,7 @@ barcodeInput.addEventListener('keypress', function (e) {
         }).then(r => r.json()).then(data => {
             if(data.status === 'success') {
                 playPurchaseChime();
+                showPurchaseToast(data.product, data.price);
                 statusDiv.innerHTML = "✅ " + data.product + " ($" + data.price + ") <button onclick='undoLast()' class='btn-undo'>↩ Undo</button>";
                 statusDiv.style.backgroundColor = "#d4edda"; updateBalance(data.new_balance);
                 const tile = document.getElementById('stock-' + code);
