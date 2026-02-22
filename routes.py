@@ -388,8 +388,12 @@ def save_wallpaper():
                     w.image_landscape = encoded
                 else:
                     w.image_portrait = encoded
-                db.session.commit()
-                flash(f"Wallpaper {slot} ({orientation}) saved.", "success")
+                try:
+                    db.session.commit()
+                    flash(f"Wallpaper {slot} ({orientation}) saved.", "success")
+                except Exception as e:
+                    db.session.rollback()
+                    flash(f"Database error saving wallpaper: {e}", "danger")
             else:
                 flash("Image too large (max 5 MB).", "danger")
         else:

@@ -117,5 +117,41 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Resize wallpaper images on the client before uploading to avoid 502s from large payloads
+document.querySelectorAll('form[action*="save_wallpaper"]').forEach(function(form) {
+    var fileInput = form.querySelector('input[type="file"]');
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var orientation = form.querySelector('input[name="orientation"]').value;
+    var maxW = orientation === 'landscape' ? 1920 : 1080;
+    var maxH = orientation === 'landscape' ? 1080 : 1920;
+
+    fileInput.addEventListener('change', function() {
+        var file = fileInput.files[0];
+        if (!file) return;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Resizing...';
+        var img = new Image();
+        img.onload = function() {
+            var w = img.width, h = img.height;
+            if (w > maxW || h > maxH) {
+                var scale = Math.min(maxW / w, maxH / h);
+                w = Math.round(w * scale); h = Math.round(h * scale);
+            }
+            var canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob(function(blob) {
+                var dt = new DataTransfer();
+                dt.items.add(new File([blob], 'wallpaper.jpg', {type: 'image/jpeg'}));
+                fileInput.files = dt.files;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-upload me-1"></i>Upload';
+            }, 'image/jpeg', 0.88);
+        };
+        img.src = URL.createObjectURL(file);
+    });
+});
+</script>
 </body>
 </html>
