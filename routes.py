@@ -179,7 +179,7 @@ def process_barcode(barcode):
             if u.email and u.notify_on_purchase:
                 display_name = u.screen_name or u.first_name
                 send_purchase_email(current_app._get_current_object(), u.email, display_name, product.description, float(price), float(u.balance))
-            return {"status": "purchased", "description": product.description}
+            return {"status": "purchased", "description": product.description, "price": float(price)}
     return {"status": "not_found"}
 
 @main.route('/')
@@ -217,6 +217,7 @@ def index():
         needs_pin=needs_pin,
         pin_user=pin_user,
         just_bought=request.args.get('bought'),
+        just_price=request.args.get('price'),
         verify_email=request.args.get('verify_email'),
         pending_email=session.get('pending_email'),
         avatar_options=AVATAR_OPTIONS,
@@ -237,7 +238,7 @@ def terms():
 @main.route('/manual/<barcode>')
 def manual_add(barcode=None):
     res = process_barcode(barcode)
-    return redirect(url_for('main.index', bought=res.get("description"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
+    return redirect(url_for('main.index', bought=res.get("description"), price=res.get("price"))) if res.get("status") == "purchased" else redirect(url_for('main.index'))
 
 @main.route('/scan', methods=['POST'])
 def scan():

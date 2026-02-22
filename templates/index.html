@@ -910,5 +910,18 @@
         <div id="purchaseToastPrice"></div>
     </div>
 </div>
+{% if just_bought %}
+<script>
+(function() {
+    var toast = document.getElementById('purchaseToast');
+    document.getElementById('purchaseToastProduct').textContent = {{ just_bought | tojson }};
+    {% if just_price %}
+    document.getElementById('purchaseToastPrice').textContent = '${{ just_price }}';
+    {% endif %}
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 1400);
+})();
+</script>
+{% endif %}
 </body>
 </html>
